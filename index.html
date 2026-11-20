@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>منصة السلوك الطلابي — المسعى</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Tajawal:wght@400;700;900&family=Almarai:wght@400;700;800&family=Amiri:wght@400;700&family=Noto+Kufi+Arabic:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--p:#047857;--l:#10B981;--d:#065F46;--s:#ECFDF5;--bg:#F1F5F9}
+body{font-family:'Cairo',system-ui,sans-serif;background:var(--bg);margin:0;font-size:15px;color:#1e293b}
+body.sm{font-size:13px}body.lg{font-size:17px}body.xl{font-size:19px}
+.bg-p{background:var(--p)!important}.bg-ps{background:var(--s)!important}
+.text-p{color:var(--p)!important}.border-p{border-color:var(--p)!important}
+.bg-grad{background:linear-gradient(135deg,var(--p),var(--d))}
+.mdl{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto}
+.dd{position:absolute;top:100%;right:0;left:0;background:#fff;border:2px solid var(--p);border-top:0;border-radius:0 0 12px 12px;max-height:280px;overflow-y:auto;z-index:30}
+.ddi{padding:10px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between}
+.ddi:hover{background:var(--s)}
+.card{transition:.25s}.card:hover{transform:translateY(-4px);box-shadow:0 12px 28px -8px rgba(0,0,0,.18)}
+.hero{background:linear-gradient(135deg,var(--p),var(--d));color:#fff;position:relative;overflow:hidden;border-radius:24px;padding:24px}
+.ic{display:inline-flex;align-items:center;justify-content:center;border-radius:14px}
+@media print{.np{display:none!important}}
+</style>
+</head>
+<body>
+
+<div id="login" class="fixed inset-0 bg-grad flex items-center justify-center p-4 z-[100]">
+  <div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md">
+    <div class="text-center mb-6">
+      <div class="w-20 h-20 bg-grad rounded-2xl mx-auto flex items-center justify-center text-4xl mb-3">🏫</div>
+      <h1 class="text-2xl font-black text-p">منصة السلوك الطلابي</h1>
+      <p class="text-sm text-slate-500 mt-1">مدرسة المسعى للبنين (٥-٩)</p>
+    </div>
+    <div class="space-y-3">
+      <div><label class="block text-sm font-bold mb-1">اسم المستخدم</label>
+        <input id="lgU" class="w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm" placeholder="اكتب اسم المستخدم هنا"></div>
+      <div><label class="block text-sm font-bold mb-1">كلمة المرور <span class="text-xs text-slate-400">(اختيارية)</span></label>
+        <input id="lgP" type="password" onkeydown="if(event.key==='Enter')login()" class="w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm" placeholder="اكتب كلمة المرور"></div>
+      <div id="lgE" class="hidden bg-red-50 text-red-600 p-3 rounded-xl text-sm font-bold"></div>
+      <button type="button" onclick="login()" class="w-full bg-p text-white font-black py-3.5 rounded-xl shadow">🔐 دخول</button>
+    </div>
+  </div>
+</div>
+
+<div id="app" class="hidden min-h-screen flex flex-row-reverse relative z-10">
+  <aside id="sb" class="fixed lg:static top-0 right-0 h-screen w-72 bg-white border-l z-40 transform translate-x-full lg:translate-x-0 transition flex flex-col overflow-y-auto np shadow-xl">
+    <div class="p-4 border-b flex items-center gap-3">
+      <div id="sLg" class="w-12 h-12 rounded-2xl bg-p flex items-center justify-center overflow-hidden">
+        <span class="text-amber-400 text-2xl font-black">م</span>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div id="sNm" class="font-black text-p text-sm">مدرسة المسعى</div>
+        <div class="text-xs text-slate-500">منصة السلوك</div>
+      </div>
+      <button onclick="forcePush()" title="رفع للسحابة" class="text-emerald-500 p-1 rounded">⬆️</button>
+      <button onclick="forcePull()" title="تحميل من السحابة" class="text-blue-500 p-1 rounded">⬇️</button>
+      <button onclick="logout()" class="text-slate-400 hover:text-red-600 p-1" title="خروج">🚪</button>
+    </div>
+    <nav class="flex-1 p-3 space-y-1" id="nav"></nav>
+    <div class="p-3 border-t text-center text-[10px] text-slate-400">
+      <div id="usr" class="font-bold text-slate-500 mb-1">—</div>
+      <div id="cloudStatus" class="text-[10px] text-slate-400 mb-1">☁️ جاهز</div>
+      <div id="bkSt" class="text-slate-400 mb-1">—</div>
+      <div class="text-[9px] text-slate-400 mt-2 border-t border-slate-200 pt-2 leading-relaxed">
+        إعداد وتصميم<br>
+        <span class="font-bold text-slate-500">أحمد بن عبدالله العلي</span><br>
+        مساعد مدير المدرسة
+      </div>
+      v14.0
+    </div>
+  </aside>
+  <main class="flex-1 overflow-x-hidden">
+    <button onclick="document.getElementById('sb').classList.toggle('translate-x-full')" class="lg:hidden fixed top-4 right-4 z-50 bg-p text-white p-3 rounded-xl shadow np">☰</button>
+    <div id="ct" class="p-4 lg:p-8 pt-20 lg:pt-8"></div>
+  </main>
+</div>
+
+<div id="mdl"></div>
+
+<script>
+/* ============ تعريفات أساسية ============ */
+let USER = null; 
+let DB;
+
+/* ============ Supabase ============ */
+const SUPABASE_URL='https://pyuquzmknolznsanksml.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5dXF1em1rbm9sem5zYW5rc21sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwNDQ0MDcsImV4cCI6MjEwNjYyMDQwN30.SG3a-9Ly_fZNSi8f8F0McvU5BNbjNIIO0wNxV-MXlgM';
+let sbClient=null;
+try{
+  if(window.supabase&&SUPABASE_URL.startsWith('https')&&SUPABASE_KEY.startsWith('eyJ')){
+    sbClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+  }
+}catch(e){console.warn('Supabase خطأ:',e)}
+const CLOUD={enabled:!!sbClient,syncing:false,pending:false,last:0,online:navigator.onLine};
+
+/* ============ الثوابت والإجراءات والسلوكيات ============ */
+const TH={emerald:['#047857','#10B981','#065F46','#ECFDF5','#F1F5F9','زمردي'],sky:['#0284C7','#38BDF8','#075985','#F0F9FF','#F1F5F9','سماوي'],indigo:['#4F46E5','#818CF8','#3730A3','#EEF2FF','#F8FAFC','نيلي'],violet:['#7C3AED','#A78BFA','#5B21B6','#F5F3FF','#FAF5FF','بنفسجي'],rose:['#E11D48','#FB7185','#9F1239','#FFF1F2','#FFF5F5','وردي'],amber:['#D97706','#FBBF24','#92400E','#FFFBEB','#FFFBEB','ذهبي'],teal:['#0D9488','#2DD4BF','#115E59','#F0FDFA','#F0FDFA','تركواز'],slate:['#334155','#64748B','#1E293B','#F1F5F9','#F8FAFC','رمادي']};
+const GR=[5,6,7,8,9], SC=[1,2,3,4,5,6,7];
+
+const DEF_ACT=[
+  {id:'A1',name:'نصح الطالب (شفهياً)',desc:'توجيه الطالب وإرشاده شفهياً نحو التزامه بقواعد الانتظام والانضباط السلوكي.',level:1},
+  {id:'A2',name:'نصح الطالب (ورقياً)',desc:'توجيه الطالب وإرشاده كتابياً نحو التزامه بقواعد الانتظام والانضباط السلوكي.',level:1},
+  {id:'A3',name:'تنبيه الطالب (ورقياً)',desc:'توجيه الطالب كتابياً بعد نصحة لتجنب تكرار المخالفة.',level:2},
+  {id:'A4',name:'إنذار الطالب وأخذ تعهد',desc:'تحذير الطالب كتابياً بعد تنبيهه لتجنب تكرار المخالفات، مع أخذ تعهد عليه وعلى ولي الأمر.',level:3},
+  {id:'A5',name:'دراسة حالة الطالب',desc:'تشخيص الحالات السلوكية والتي تكون من قبل الأخصائي الاجتماعي أو النفسي بالمدرسة.',level:4},
+  {id:'A6',name:'فصل طالب مؤقتاً (لا تتجاوز 3 أيام)',desc:'فصل الطالب مؤقتاً مدة لا تتجاوز 3 أيام دراسية فعلية وأخذ تعهد على الطالب وولي الأمر بعد انتهاء مدة الفصل بالتزام الطالب بقواعد الانضباط السلوكي.',level:5},
+  {id:'A7',name:'استدعاء ولي الأمر',desc:'إبلاغ ولي الأمر هاتفياً أو كتابياً واستدعاؤه للمدرسة لمتابعة سلوك الطالب.',level:5},
+  {id:'A8',name:'رفع للجنة بالمديرية (فصل 5-10 أيام)',desc:'رفع موضوع الطالب إلى اللجنة بالمديرية لإصدار قرار بفصله مدة لا تقل عن 5 أيام ولا تزيد عن 10 أيام مع أخذ تعهد للطالب وولي الأمر.',level:6},
+  {id:'A9',name:'تخفيض 10% من درجات التقويم',desc:'تخفيض نسبة 10% من درجات التقويم المستمر للطالب.',level:5},
+  {id:'A10',name:'حرمان من امتحان فصل دراسي',desc:'حرمان الطالب من دخول امتحان فصل دراسي والسماح له بدخول امتحان الدور الثاني.',level:6},
+  {id:'A11',name:'رفع للجنة بالمديرية (فصل نهائي / نقل)',desc:'نقل الطالب تأديبياً أو رفع موضوعه للجنة المديرية لإصدار قرار بفصله نهائياً من التعليم النظامي.',level:7},
+  {id:'A12',name:'حرمان من امتحان العام الدراسي',desc:'حرمان من دخول امتحان العام الدراسي في الدور الأول والثاني ويعتبر راسباً.',level:7}
+];
+
+const DEF_BEH=[
+  // --- التأخير والغياب ---
+  {id:'B_T',name:'تأخر عن الطابور الصباحي',cat:'تأخر دراسي',points:1,level:1},
+  {id:'B_G1',name:'غياب بدون عذر (يومان)',cat:'غياب',points:1,level:1},
+  {id:'B_G2',name:'غياب بدون عذر (5 أيام)',cat:'غياب',points:2,level:2},
+  {id:'B_G3',name:'غياب بدون عذر (8 أيام)',cat:'غياب',points:3,level:3},
+  {id:'B_G4',name:'غياب بدون عذر (10 أيام)',cat:'غياب',points:4,level:4},
+  {id:'B_G5',name:'غياب بدون عذر (15 يوماً)',cat:'غياب',points:5,level:5},
+  {id:'B_G6',name:'غياب بدون عذر (30 يوماً)',cat:'غياب',points:6,level:6},
+  {id:'B_G7',name:'غياب بدون عذر (45 يوماً)',cat:'غياب',points:7,level:7},
+  
+  // --- البند (أ) - المستوى 1 ---
+  {id:'B1',name:'الإخلال بنظام الطابور أو الحصص أو الأنشطة',cat:'الانضباط السلوكي',points:1,level:1},
+  {id:'B2',name:'عدم الالتزام بالزي المدرسي',cat:'الانضباط السلوكي',points:1,level:1},
+  {id:'B3',name:'العبث بمرافق المدرسة ووسائل النقل',cat:'الانضباط السلوكي',points:1,level:1},
+  {id:'B4',name:'الإساءة بالأقول إلى أحد زملائه',cat:'الانضباط السلوكي',points:1,level:1},
+  {id:'B5',name:'عدم المحافظة على النظافة أو المظهر',cat:'الانضباط السلوكي',points:1,level:1},
+  {id:'B6',name:'عدم الالتزام بإحضار الكتب والدفاتر',cat:'الانضباط السلوكي',points:1,level:1},
+  {id:'B7',name:'عدم الاحترام في التعامل مع المعلمين',cat:'الانضباط السلوكي',points:1,level:1},
+  {id:'B8',name:'تناول المأكولات في غير وقتها أو العلكة',cat:'الانضباط السلوكي',points:1,level:1},
+  {id:'B9',name:'النوم في أثناء الحصص',cat:'الانضباط السلوكي',points:1,level:1},
+  {id:'B10',name:'عدم المحافظة على نظافة الفصل',cat:'الانضباط السلوكي',points:1,level:1},
+  {id:'B11',name:'الإهمال في أداء الواجبات',cat:'الانضباط السلوكي',points:1,level:1},
+  {id:'B12',name:'عدم الالتزام بضوابط النقل المدرسي',cat:'الانضباط السلوكي',points:1,level:1},
+  {id:'B13',name:'التسبب في الإزعاج بالقرب من الصفوف',cat:'الانضباط السلوكي',points:1,level:1},
+  {id:'B14',name:'عدم الالتزام بتوجيهات المعلم',cat:'الانضباط السلوكي',points:1,level:1},
+  {id:'B15',name:'سلوك يخالف الآداب والنظام العام',cat:'الانضباط السلوكي',points:1,level:1},
+  
+  // --- البند (ب) - المستوى 2 ---
+  {id:'B16',name:'تزوير محرر مدرسي',cat:'الانضباط السلوكي',points:2,level:2},
+  {id:'B17',name:'تزوير توقيع ولي الأمر',cat:'الانضباط السلوكي',points:2,level:2},
+  
+  // --- البند (ج) - المستوى 3 ---
+  {id:'B18',name:'الشجار وتهديد الزملاء',cat:'الانضباط السلوكي',points:3,level:3},
+  {id:'B19',name:'الاعتداء بالألفاظ النابية',cat:'الانضباط السلوكي',points:3,level:3},
+  {id:'B20',name:'الاستيلاء على متعلقات الزملاء',cat:'الانضباط السلوكي',points:3,level:3},
+  
+  // --- البند (هـ) - المستوى 5 ---
+  {id:'B21',name:'إحضار أجهزة سمعية وبصرية',cat:'الانضباط السلوكي',points:4,level:5},
+  {id:'B22',name:'إساءة استخدام الحاسب الآلي',cat:'الانضباط السلوكي',points:4,level:5},
+  {id:'B23',name:'حيازة مواد ضارة أو أدوات حادة',cat:'الانضباط السلوكي',points:4,level:5},
+  {id:'B24',name:'الاعتداء على الزملاء بدنياً',cat:'الانضباط السلوكي',points:4,level:5},
+  {id:'B25',name:'الكتابة على جدران المدرسة',cat:'الانضباط السلوكي',points:4,level:5},
+  {id:'B26',name:'الهروب من المدرسة',cat:'الانضباط السلوكي',points:4,level:5},
+  
+  // --- البند (و) - المستوى 6 ---
+  {id:'B27',name:'الإساءة للرموز الوطنية',cat:'الانضباط السلوكي',points:5,level:6},
+  {id:'B28',name:'عدم احترام الدين والتقاليد',cat:'الانضباط السلوكي',points:5,level:6},
+  {id:'B29',name:'الترويج للأفكار المذهبية',cat:'الانضباط السلوكي',points:5,level:6},
+  {id:'B30',name:'الاختلال بنظم سير الامتحانات',cat:'الانضباط السلوكي',points:5,level:6},
+  {id:'B31',name:'الإساءة لموظفي المدرسة أو الزوار',cat:'الانضباط السلوكي',points:5,level:6},
+  {id:'B32',name:'إتلاف متعلقات الآخرين',cat:'الانضباط السلوكي',points:5,level:6},
+  {id:'B33',name:'التدخين أو المخدرات',cat:'الانضباط السلوكي',points:5,level:6},
+  {id:'B34',name:'التحريض على الفوضى',cat:'الانضباط السلوكي',points:5,level:6},
+  {id:'B35',name:'التحريض على الاعتداء الجنسي أو البدني على زميل',cat:'الانضباط السلوكي',points:5,level:6},
+  
+  // --- البند (ز) - المستوى 7 ---
+  {id:'B36',name:'الاعتداء البدني على موظفي المدرسة أو سائقي النقل',cat:'الانضباط السلوكي',points:6,level:7},
+  {id:'B37',name:'ارتكاب الاعتداء الجنسي أو البدني على زميل',cat:'الانضباط السلوكي',points:6,level:7},
+  {id:'B38',name:'الترويج لتناول المخدرات بين الزملاء',cat:'الانضباط السلوكي',points:6,level:7},
+  
+  {id:'B_OTHER',name:'سلوك آخر (كتابة حرة)',cat:'أخرى',points:1,level:1}
+];
+
+const DEF_STU=[['أحمد بن سالم الرواحي',5,1],['محمد بن خالد البلوشي',5,1],['يوسف بن علي المعمري',5,2],['عبدالله بن حمد الحارثي',5,2],['سعيد بن راشد الكندي',5,3],['خالد بن ناصر الفارسي',6,1],['سلطان بن ماجد الشكيلي',6,1],['حمزة بن ياسر العامري',6,2],['طلال بن سعيد الهنائي',6,2],['فهد بن عبدالرحمن الزدجالي',6,3],['بدر بن سليمان الريامي',7,1],['مازن بن حمدان الحجري',7,1],['معاذ بن طارق السعدي',7,2],['أيمن بن وليد المقبالي',7,2],['راشد بن سيف الخروصي',7,3],['هلال بن منصور الغافري',8,1],['نبيل بن عامر الحوسني',8,1],['قيس بن مروان الوهيبي',8,2],['زياد بن فارس اليعقوبي',8,2],['مروان بن أيمن السيابي',8,3],['حاتم بن صالح العبري',9,1],['عمار بن نبيل الجابري',9,1],['أنس بن كمال الرئيسي',9,2],['بلال بن هيثم المخيني',9,2],['جعفر بن عادل الشعيلي',9,3],['كرم بن رامي الصوافي',9,3],['ليث بن جابر الحسني',5,4],['مصعب بن أنور البوسعيدي',6,4],['نزار بن صقر الهاشمي',7,4],['وسام بن فاروق الأغبري',8,4],['ياسر بن رمزي العجمي',9,4],['يعقوب بن إسحاق النعماني',5,5],['أسامة بن زهير الكلباني',6,5],['إبراهيم بن نوح المسروري',7,5],['إسماعيل بن ياسين الحبسي',8,5],['بشار بن حكيم الشيباني',9,5]];
+
+const KEY='almasaa_v14_0';
+const DEF_CFG={schoolName:'مدرسة المسعى للبنين (٥-٩)',platformName:'منصة السلوك الطلابي',ministry:'وزارة التربية والتعليم — سلطنة عُمان',directorate:'المديرية العامة للتعليم بمحافظة شمال الباطنة',theme:'emerald',uiSize:'medium',printFont:'Cairo',printSize:'12',printWeight:'700',logoR:'',logoL:'',committee:'لجنة شؤون الطلبة',adminDept:'إدارة المدرسة',principalName:'حسن علي إبراهيم البلوشي',principalTitle:'مدير المدرسة',healthVisitorName:'',healthVisitorTitle:'الزائر الصحي',reportTitle:'إقرار مخالفة سلوكية وانتظام دراسي',reportFooter:'يُرجى من ولي الأمر التواصل مع إدارة المدرسة لمتابعة الحالة.',healthTitle:'خطاب تحويل للوحدة الصحية',healthRecipient:'الفاضل مدير مستشفى / مركز صحي: مجمع صحي السويق المحترم',healthGreeting:'السلام عليكم ورحمة الله وبركاته،',healthBody:'نحيل إليكم الطالب:',healthClosing:'آملين إجراء الكشف الطبي عليه وإفادتنا بالنتيجة، والله الموفق.',healthReturnNote:'يجب إعادة هذه الرسالة لإدارة المدرسة مختومة من المستشفى في اليوم التالي.',healthOptions:['مسؤول الغياب','يقبل العذر','لا يقبل العذر'],signatures:['توقيع المعلم','توقيع الأخصائي','توقيع مدير المدرسة'],waBehavior:'السلام عليكم ورحمة الله وبركاته\nولي أمر الطالب: {student}\nالصف: {grade} / الشعبة: {section}\n\nنحيطكم علماً بتسجيل إجراء بحق ابنكم:\n📋 السلوك: {behavior}\n⚠️ النقاط: {points}\n🎯 الإجراء: {action}\n📜 النص اللائحي: {desc}\n📅 {date}\n\n{school}',waHealth:'السلام عليكم ورحمة الله وبركاته\nولي أمر الطالب: {student}\nالصف: {grade} / الشعبة: {section}\n\nتم تحويل ابنكم للوحدة الصحية{reason}.\n📅 {date}\n\n{school}'};
+
+function seed(){return {config:{...DEF_CFG},users:[{id:'U1',name:'مدير النظام',title:'مدير',username:'almasaa',password:'',isAdmin:true},{id:'U2',name:'وكيل المدرسة',title:'وكيل',username:'wakil',password:'',isAdmin:false}],students:DEF_STU.map((x,i)=>({id:'S'+String(i+1).padStart(3,'0'),name:x[0],grade:x[1],section:x[2],phone:'',guardian:''})),behaviors:DEF_BEH.map(b=>({...b,active:true})),actions:DEF_ACT.map(a=>({...a})),health:[],referrals:[],records:[],followups:[],resolved:[]}}
+
+// 🛡️ درع الحماية الشامل (يمنع مسح البيانات ويحدث المستويات)
+function fixDB(obj){
+  if(!obj) return;
+  if(!obj.config) obj.config={...DEF_CFG};
+  Object.keys(DEF_CFG).forEach(k=>{if(obj.config[k]===undefined)obj.config[k]=DEF_CFG[k]});
+  
+  ['health','referrals','records','followups','resolved'].forEach(k=>{if(!obj[k] || !Array.isArray(obj[k]))obj[k]=[]});
+  
+  // إصلاح المستخدمين
+  if(!obj.users || !Array.isArray(obj.users) || obj.users.length===0) {
+      obj.users=[{id:'U1',name:'مدير النظام',title:'مدير',username:'almasaa',password:'',isAdmin:true},{id:'U2',name:'وكيل المدرسة',title:'وكيل',username:'wakil',password:'',isAdmin:false}];
+  }
+
+  // إصلاح السلوكيات وإجبارها على أن تكون نشطة وتحديث مستوياتها لتطابق اللائحة
+  if(!obj.behaviors || !Array.isArray(obj.behaviors)) obj.behaviors=[];
+  DEF_BEH.forEach(def => {
+      let existing = obj.behaviors.find(b => b.id === def.id);
+      if(!existing) {
+          obj.behaviors.push({...def, active: true});
+      } else {
+          existing.active = true; 
+          existing.level = def.level; // إجبار التحديث للمستوى الصحيح
+          if(!existing.cat) existing.cat = def.cat;
+      }
+  });
+
+  // إصلاح الإجراءات
+  if(!obj.actions || !Array.isArray(obj.actions) || obj.actions.length===0) obj.actions=[];
+  DEF_ACT.forEach(def => {
+      if(!obj.actions.find(a => a.id === def.id)) {
+          obj.actions.push({...def});
+      }
+  });
+
+  // إصلاح الطلبة
+  if(!obj.students || !Array.isArray(obj.students) || obj.students.length === 0){
+      obj.students = DEF_STU.map((x,i)=>({id:'S'+String(i+1).padStart(3,'0'),name:x[0],grade:x[1],section:x[2],phone:'',guardian:''}));
+  }
+}
+
+try{DB=JSON.parse(localStorage.getItem(KEY))}catch(e){DB=null}
+if(!DB){DB=seed()}
+fixDB(DB);
+
+const adm=DB.users.find(u=>u.username==='almasaa');
+if(adm){adm.password='';adm.isAdmin=true}else{DB.users.unshift({id:'U1',name:'مدير النظام',title:'مدير',username:'almasaa',password:'',isAdmin:true})}
+localStorage.setItem(KEY,JSON.stringify(DB));
+
+function save(){
+  try{fixDB(DB);localStorage.setItem(KEY,JSON.stringify(DB))}catch(e){}
+  bkTick();
+  if(CLOUD.enabled&&CLOUD.online)cloudPush();
+}
+function uid(p){return p+Date.now()+Math.floor(Math.random()*1000)}
+
+/* ============ Supabase Sync ============ */
+async function cloudPush(){
+  if(!sbClient)return;
+  if(CLOUD.syncing){CLOUD.pending=true;return}
+  CLOUD.syncing=true;upCloud('⬆️ رفع...');
+  try{
+    const nowIso=new Date().toISOString();
+    const {error}=await sbClient.from('app_data').upsert({id:'main',payload:DB,updated_at:nowIso,updated_by:USER?USER.name:''});
+    if(!error)CLOUD.last=new Date(nowIso).getTime();
+    upCloud(error?'❌ فشل الرفع':'✅ متزامن');
+  }catch(e){upCloud('⚠️ خطأ')}
+  CLOUD.syncing=false;
+  if(CLOUD.pending){CLOUD.pending=false;cloudPush()}
+}
+async function cloudPull(silent){
+  if(!sbClient)return false;
+  if(!silent)upCloud('⬇️ تحميل...');
+  try{
+    const {data,error}=await sbClient.from('app_data').select('payload,updated_at').eq('id','main').single();
+    if(error||!data||!data.payload)return false;
+    const p=data.payload;
+    const remoteTs=new Date(data.updated_at).getTime();
+    if(silent&&remoteTs<=CLOUD.last)return false;
+    if(!p.students||!Array.isArray(p.students))return false;
+    const cloudHasData=p.students.length>0||(p.records&&p.records.length>0)||(p.users&&p.users.length>0)||(p.behaviors&&p.behaviors.length>0);
+    const localHasData=DB.students.length>0||DB.records.length>0||DB.users.length>0;
+    if(!cloudHasData&&localHasData){upCloud('⬆️ رفع أولي...');await cloudPush();return false}
+    if(!cloudHasData&&!localHasData){upCloud('✅ جاهز');return false}
+    
+    DB=p;
+    fixDB(DB); 
+    
+    localStorage.setItem(KEY,JSON.stringify(DB));
+    CLOUD.last=remoteTs;
+    if(!silent)upCloud('✅ محدّث');
+    return true;
+  }catch(e){console.warn('cloudPull:',e);return false}
+}
+function upCloud(txt){const el=document.getElementById('cloudStatus');if(el)el.textContent=txt}
+async function forcePull(){
+  if(!sbClient){toast('Supabase غير مهيأ','err');return}
+  if(!confirm('سيتم استبدال البيانات المحلية بالنسخة السحابية. متابعة؟'))return;
+  const ok=await cloudPull(false);
+  if(ok){toast('✅ تم التحديث من السحابة');setTimeout(()=>location.reload(),800)}
+  else toast('السحابة فارغة — لم يتم التغيير','err');
+}
+async function forcePush(){
+  if(!sbClient){toast('Supabase غير مهيأ','err');return}
+  CLOUD.syncing=false;
+  await cloudPush();
+  toast('✅ تم رفع البيانات للسحابة');
+}
+window.addEventListener('online',()=>{CLOUD.online=true;cloudPush()});
+window.addEventListener('offline',()=>{CLOUD.online=false;upCloud('📴 غير متصل')});
+
+/* ============ أدوات ============ */
+const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtD=t=>new Date(t).toLocaleDateString('ar-OM',{year:'numeric',month:'2-digit',day:'2-digit'});
+const fmtDT=t=>new Date(t).toLocaleString('ar-OM',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+const today=()=>new Date().toLocaleDateString('ar-OM',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+const ts=()=>new Date().toLocaleDateString('ar-OM',{year:'numeric',month:'2-digit',day:'2-digit'});
+const gS=id=>DB.students.find(x=>x.id===id);
+const gB=id=>DB.behaviors.find(x=>x.id===id);
+const gA=id=>DB.actions.find(x=>x.id===id);
+const gU=id=>DB.users.find(x=>x.id===id);
+const toast=(m,t='ok')=>{let e=document.getElementById('tst');if(!e){e=document.createElement('div');e.id='tst';e.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9999';document.body.appendChild(e)}e.innerHTML=`<div class="px-5 py-3 rounded-xl font-bold text-sm shadow-lg ${t==='ok'?'bg-p text-white':'bg-red-600 text-white'}">${m}</div>`;setTimeout(()=>e.innerHTML='',2500)};
+
+function theme(){const t=TH[DB.config.theme]||TH.emerald;const r=document.documentElement.style;r.setProperty('--p',t[0]);r.setProperty('--l',t[1]);r.setProperty('--d',t[2]);r.setProperty('--s',t[3]);r.setProperty('--bg',t[4])}
+function size(){document.body.className=document.body.className.replace(/sm|lg|xl/g,'').trim();const m={small:'sm',medium:'',large:'lg',xl:'xl'}[DB.config.uiSize]||'';if(m)document.body.classList.add(m)}
+theme();size();
+
+/* ============ الدخول ============ */
+function login(){
+  try {
+    const conv=s=>String(s).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).trim();
+    const u=conv(document.getElementById('lgU').value || '');
+    const p=conv(document.getElementById('lgP').value || '');
+    const e=document.getElementById('lgE');
+    
+    if(!u){
+      e.textContent='❌ أدخل اسم المستخدم';
+      e.classList.remove('hidden');
+      setTimeout(()=>e.classList.add('hidden'),4000);
+      return;
+    }
+    if(!DB || !DB.users){ alert('خطأ في تحميل البيانات، يرجى تحديث الصفحة'); return; }
+    
+    const user=DB.users.find(x=>x.username===u);
+    if(!user){
+      e.textContent='❌ اسم المستخدم غير موجود';
+      e.classList.remove('hidden');
+      setTimeout(()=>e.classList.add('hidden'),4000);
+      return;
+    }
+    
+    if(user.password&&user.password.trim()!==''&&user.password!==p){
+      e.textContent='❌ كلمة المرور غير صحيحة';
+      e.classList.remove('hidden');
+      setTimeout(()=>e.classList.add('hidden'),4000);
+      return;
+    }
+    
+    USER=user;
+    sessionStorage.setItem('alm_sess',user.id);
+    document.getElementById('login').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    document.getElementById('usr').textContent=user.name;
+    
+    boot();
+  } catch(err) {
+    console.error("Login Error: ", err);
+    alert('حدث خطأ غير متوقع: ' + err.message);
+  }
+}
+function logout(){if(!confirm('خروج؟'))return;USER=null;sessionStorage.removeItem('alm_sess');document.getElementById('app').classList.add('hidden');document.getElementById('login').classList.remove('hidden')}
+const isAdmin=()=>USER&&USER.isAdmin;
+
+/* ============ القائمة ============ */
+const NAV=[{id:'home',l:'الرئيسية',i:'🏠'},{id:'entry',l:'تسجيل سلوك',i:'✍️'},{id:'records',l:'سجل السلوكيات',i:'📋'},{id:'analytics',l:'التحليل المتقدم',i:'📈'},{id:'students',l:'إدارة الطلبة',i:'👥'},{id:'health',l:'هويتي الصحية',i:'❤️'},{id:'htrans',l:'تحويل للوحدة الصحية',i:'🌙'},{id:'hreport',l:'تقرير الوحدة الصحية',i:'📊'},{id:'users',l:'إدارة المستخدمين',i:'👤',ad:1},{id:'behaviors',l:'إدارة السلوكيات',i:'⚠️',ad:1},{id:'actions',l:'إدارة الإجراءات',i:'🎯',ad:1},{id:'reports',l:'التقارير الرسمية',i:'📄'},{id:'alerts',l:'التنبيهات والمتابعة',i:'🔔'},{id:'settings',l:'الإعدادات',i:'⚙️',ad:1}];
+let pg='home';
+function nav(){
+  const al=alerts().length,fu=follow().length;
+  document.getElementById('nav').innerHTML=NAV.filter(n=>!n.ad||isAdmin()).map(n=>{
+    const a=pg===n.id;
+    const b=(n.id==='alerts'&&(al+fu)>0)?`<span class="bg-red-600 text-white text-xs rounded-full px-1.5 font-black">${al+fu}</span>`:'';
+    return `<button onclick="go('${n.id}')" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold text-sm ${a?'bg-p text-white shadow':'text-slate-700 hover:bg-ps'}"><span class="text-lg">${n.i}</span><span class="flex-1 text-right">${n.l}</span>${b}</button>`;
+  }).join('');
+  document.getElementById('sNm').textContent=DB.config.schoolName;
+  const l=document.getElementById('sLg');
+  l.innerHTML=DB.config.logoR?`<img src="${DB.config.logoR}" style="width:100%;height:100%;object-fit:contain">`:'<span class="text-amber-400 text-2xl font-black">م</span>';
+}
+function go(p){
+  const n=NAV.find(x=>x.id===p);
+  if(n&&n.ad&&!isAdmin()){toast('للمدير فقط','err');return}
+  pg=p;nav();
+  if(window.innerWidth<1024)document.getElementById('sb').classList.add('translate-x-full');
+  render();
+  window.scrollTo(0,0);
+}
+
+/* ============ حسابات ============ */
+function alerts(){
+  const now=Date.now();
+  const r=DB.records.filter(x=>now-x.createdAt<=30*864e5);
+  const c={};r.forEach(x=>{c[x.studentId]=(c[x.studentId]||0)+1});
+  return Object.entries(c).filter(([_,n])=>n>=3).map(([sid,n])=>{const s=gS(sid);return s?{id:sid+'_30',sid,sev:n>=5?'h':'m',title:'تكرار المخالفات',msg:`${s.name} (${s.grade}/${s.section}): ${n} مخالفة`,n}:null}).filter(Boolean).filter(a=>!DB.resolved.includes(a.id));
+}
+function follow(){
+  const now=Date.now();
+  return DB.followups.filter(f=>!f.resolved).map(f=>{const s=gS(f.studentId),r=DB.records.find(x=>x.id===f.recordId);return {...f,s,r,d:Math.floor((now-f.createdAt)/864e5)}}).filter(f=>f.s&&f.d>=1);
+}
+function stats(id){const r=DB.records.filter(x=>x.studentId===id);return {count:r.length,points:r.reduce((a,b)=>a+(b.points||0),0)}}
+
+/* ============ Backup ============ */
+let BK={enabled:true,n:0,last:0,int:10};
+try{const b=localStorage.getItem('alm_bk');if(b)BK=JSON.parse(b)}catch(e){}
+function bkTick(){BK.n++;localStorage.setItem('alm_bk',JSON.stringify(BK));if(BK.enabled&&BK.n>=BK.int)bk()}
+function bk(){
+  try{
+    const t=new Date(),st=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}_${String(t.getHours()).padStart(2,'0')}-${String(t.getMinutes()).padStart(2,'0')}`;
+    const b=new Blob([JSON.stringify({school:DB.config.schoolName,date:t.toISOString(),data:DB},null,2)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`AlMasaa_${st}.json`;document.body.appendChild(a);a.click();document.body.removeChild(a);
+    BK.n=0;BK.last=Date.now();localStorage.setItem('alm_bk',JSON.stringify(BK));toast('💾 نسخة احتياطية');
+  }catch(e){}
+}
+function restore(){
+  const i=document.createElement('input');i.type='file';i.accept='.json';
+  i.onchange=e=>{const f=e.target.files[0];if(!f)return;if(!confirm('استبدال البيانات؟'))return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);DB=d.data||d;fixDB(DB);localStorage.setItem(KEY,JSON.stringify(DB));alert('✅ تم');location.reload()}catch(x){alert('خطأ')}};r.readAsText(f)};
+  i.click();
+}
+
+/* ============ الطباعة ============ */
+function prt(html){
+  const ifr=document.createElement('iframe');
+  ifr.style.position='fixed';
+  ifr.style.left='-9999px';
+  ifr.style.top='0';
+  ifr.style.width='800px';
+  ifr.style.height='1200px';
+  ifr.style.border='none';
+  document.body.appendChild(ifr);
+
+  const doc=ifr.contentWindow.document;
+  doc.open();
+  doc.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>طباعة</title>
+    <script src="https://cdn.tailwindcss.com"><\/script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Tajawal:wght@400;700;900&family=Almarai:wght@700&family=Amiri:wght@400;700&family=Noto+Kufi+Arabic:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+      :root{--c-primary:${TH[DB.config.theme][0]};--c-primary-soft:${TH[DB.config.theme][3]}}
+      body{font-family:'${DB.config.printFont}',sans-serif;padding:15px;direction:rtl;font-size:${DB.config.printSize}pt;font-weight:${DB.config.printWeight};background:#fff;}
+      table{border-collapse:collapse;width:100%}
+      td,th{border:1px solid #999;padding:6px}
+      @media print{@page{margin:1cm;size:A4}}
+    </style></head><body>${html}</body></html>`);
+  doc.close();
+
+  setTimeout(()=>{
+    ifr.contentWindow.focus();
+    ifr.contentWindow.print();
+    setTimeout(()=>{if(ifr.parentNode)document.body.removeChild(ifr)},2000);
+  },1000);
+}
+
+function wa(phone,msg){
+  if(!phone){toast('لا يوجد رقم ولي أمر مسجل','err');return}
+  let c=String(phone).replace(/\D/g,'');
+  if(c.startsWith('00'))c=c.slice(2);
+  if(!c.startsWith('968')&&c.length<=8)c='968'+c;
+  
+  const url=`https://wa.me/${c}?text=${encodeURIComponent(msg)}`;
+  const a=document.createElement('a');
+  a.href=url;
+  a.target='_blank';
+  a.rel='noopener noreferrer';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+async function pdf(html,fn,phone,msg){
+  toast('⏳ جاري PDF...');
+  const ifr=document.createElement('iframe');ifr.style.cssText='position:fixed;left:-9999px;top:0;width:800px;height:1200px;border:none';document.body.appendChild(ifr);
+  const d=ifr.contentDocument;d.open();d.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>body{font-family:'Cairo',sans-serif;padding:20px;background:#fff;width:760px;font-size:12pt}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:6px}</style></head><body>${html}</body></html>`);d.close();
+  await new Promise(r=>setTimeout(r,1500));
+  try{
+    const c=await html2canvas(d.body,{scale:2,useCORS:true,backgroundColor:'#fff',width:760,windowWidth:760});
+    const img=c.toDataURL('image/png');
+    const {jsPDF}=window.jspdf;const p=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const pw=p.internal.pageSize.getWidth(),ph=p.internal.pageSize.getHeight();
+    const iw=pw-10,ih=(c.height*iw)/c.width;
+    if(ih<=ph-10)p.addImage(img,'PNG',5,5,iw,ih);
+    else{let rm=ih,of=0;while(rm>0){const phh=Math.min(ph-10,rm);const c2=document.createElement('canvas');c2.width=c.width;c2.height=(phh/ih)*c.height;c2.getContext('2d').drawImage(c,0,of*c.height/ih,c.width,c2.height,0,0,c.width,c2.height);p.addImage(c2.toDataURL('image/png'),'PNG',5,5,iw,phh);of+=phh;rm-=phh;if(rm>0)p.addPage()}}
+    const b=p.output('blob');const file=new File([b],fn,{type:'application/pdf'});
+    document.body.removeChild(ifr);
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      try{await navigator.share({files:[file],text:msg||'',title:fn});toast('✅ قائمة المشاركة')}
+      catch(e){if(e.name!=='AbortError'){const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=fn;document.body.appendChild(a);a.click();document.body.removeChild(a)}}
+    }else{
+      const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=fn;document.body.appendChild(a);a.click();document.body.removeChild(a);
+      toast('💾 تم تنزيل PDF');setTimeout(()=>wa(phone,msg||''),500);
+    }
+  }catch(e){if(ifr.parentNode)document.body.removeChild(ifr);toast('فشل PDF','err')}
+}
+
+/* ============ قوالب ============ */
+function rHdr(){const c=DB.config;const r=c.logoR?`<img src="${c.logoR}" style="width:65px;height:65px;object-fit:contain">`:'',l=c.logoL?`<img src="${c.logoL}" style="width:65px;height:65px;object-fit:contain">`:'';return `<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:3px double var(--c-primary);padding-bottom:10px;margin-bottom:12px"><div style="width:70px">${r}</div><div style="text-align:center;flex:1"><div style="font-size:11px">${esc(c.ministry)}</div><div style="font-size:10px;color:#666">${esc(c.directorate)}</div><div style="font-size:16px;font-weight:900;color:var(--c-primary);margin-top:5px">${esc(c.schoolName)}</div></div><div style="width:70px;text-align:right">${l}</div></div>`}
+function rFtr(){
+  const c=DB.config;
+  return `<div style="margin-top:25px;padding-top:10px;border-top:2px solid var(--c-primary)">
+    <div style="display:flex;justify-content:space-between;font-size:11px">
+      <div style="text-align:center">
+        <div style="font-weight:bold">${esc(c.committee)}</div>
+        <div style="color:#666;font-size:10px">${esc(c.adminDept)}</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-weight:bold">${esc(c.principalTitle)}</div>
+        <div style="font-weight:900">${esc(c.principalName)}</div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:9px;color:#888;margin-top:8px">
+      <div>${esc(c.schoolName)} · ${ts()}</div>
+      <div>إعداد وتصميم: أحمد بن عبدالله العلي - مساعد مدير المدرسة</div>
+    </div>
+  </div>`;
+}
+function fill(t,v){let o=t;Object.entries(v).forEach(([k,x])=>{o=o.replace(new RegExp('{'+k+'}','g'),x)});return o}
+
+function recordHTML(r){
+  const s=gS(r.studentId);const c=DB.config;
+  const occurrences = r.occurrenceCount || 1;
+  
+  let historyNote = '';
+  if (r.behaviorId === 'B_T' && r.isAbsenceEquiv) {
+      historyNote = `<div style="background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;padding:8px;margin-bottom:12px;font-size:11px;border-radius:6px;text-align:center;font-weight:bold">⚠️ تنبيه هام: هذا التأخر رقم (${occurrences}) للطالب. ووفقاً للائحة يُحسب كل 5 مرات تأخر كيوم غياب بدون عذر. تم اتخاذ إجراء الغياب بناءً على ذلك.</div>`;
+  } else if (occurrences > 1) {
+      historyNote = `<div style="background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;padding:8px;margin-bottom:12px;font-size:11px;border-radius:6px;text-align:center;font-weight:bold">⚠️ ملاحظة هامة: هذا السلوك يتكرر للمرة (${occurrences}) لهذا الطالب. لذلك تم تصعيد الإجراء واتخاذ العقوبة التالية بناءً على تدرج لائحة شؤون الطلبة.</div>`;
+  }
+
+  return `<div style="max-width:760px;margin:auto">${rHdr()}<div style="text-align:center;font-size:16px;font-weight:900;margin:12px 0;background:var(--c-primary-soft);padding:8px;border-radius:6px">${esc(c.reportTitle)}</div>
+  ${historyNote}
+  <table style="width:100%;font-size:12px;margin-bottom:12px"><tr><td style="background:#f5f5f5;font-weight:bold;width:22%">الطالب</td><td>${s?esc(s.name):''}</td><td style="background:#f5f5f5;width:15%;font-weight:bold">الصف</td><td>${s?s.grade:''}</td></tr><tr><td style="background:#f5f5f5;font-weight:bold">الشعبة</td><td>${s?s.section:''}</td><td style="background:#f5f5f5;font-weight:bold">الهاتف</td><td>${s&&s.phone?esc(s.phone):'—'}</td></tr><tr><td style="background:#f5f5f5;font-weight:bold">التاريخ</td><td>${fmtDT(r.createdAt)}</td><td style="background:#f5f5f5;font-weight:bold">المسجل</td><td>${esc(r.userName||'—')} (${esc(r.userTitle||'')})</td></tr><tr><td style="background:#f5f5f5;font-weight:bold">تكرار السلوك</td><td colspan="3" style="color:#DC2626;font-weight:bold">المرة ${occurrences}</td></tr></table>
+  <table style="width:100%;font-size:12px;margin-bottom:12px"><tr><td style="background:#fef2f2;font-weight:bold;width:22%">السلوك / المخالفة</td><td>${esc(r.behaviorName||'')}</td><td style="background:#fef2f2;font-weight:bold;width:15%">النقاط</td><td style="color:#DC2626;font-weight:bold">${r.points||0} نقطة</td></tr><tr><td style="background:#fffbeb;font-weight:bold;vertical-align:top">الإجراء المتخذ</td><td colspan="3"><div style="font-weight:bold;margin-bottom:4px">${esc(r.actionName||'')}</div><div style="font-size:11px;color:#333;background:#fff;padding:6px;border:1px solid #eee;border-radius:4px;line-height:1.6"><b>النص اللائحي (قرار 234/2017):</b> ${esc(r.regulationText||gA(r.actionId)?.desc||'—')}</div></td></tr>${r.actionNote?`<tr><td style="background:#fffbeb;font-weight:bold">ملاحظات الإجراء</td><td colspan="3">${esc(r.actionNote)}</td></tr>`:''}</table>
+  
+  <div style="display:flex;justify-content:center;font-size:11px;margin-top:15px;margin-bottom:15px;background:#f8fafc;padding:10px;border-radius:8px;border:1px dashed #cbd5e1">
+      <div style="text-align:center;width:100%">
+          <div style="font-weight:bold;color:#64748b;margin-bottom:4px">يراجع الأستاذ</div>
+          <div style="font-weight:900;color:var(--c-primary);font-size:13px">${esc(r.reviewedBy || '...................................')}</div>
+      </div>
+  </div>
+
+  <div style="background:var(--c-primary-soft);border-right:3px solid var(--c-primary);padding:8px;margin-bottom:12px;font-size:11px">${esc(c.reportFooter)}</div><div style="display:flex;justify-content:space-between;margin-top:20px;font-size:11px">${c.signatures.map(s=>`<div style="text-align:center"><div style="font-weight:bold;margin-bottom:35px">${esc(s)}</div><div style="border-top:1px solid #999;padding-top:2px;min-width:130px">................</div></div>`).join('')}</div>${rFtr()}</div>`;
+}
+
+function healthHTML(sid,reason){const s=gS(sid);const c=DB.config;const r=c.logoR?`<img src="${c.logoR}" style="width:70px;height:70px;object-fit:contain">`:'',l=c.logoL?`<img src="${c.logoL}" style="width:70px;height:70px;object-fit:contain">`:'';return `<div style="max-width:800px;margin:auto"><div style="border:2px solid #000;padding:12px"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><div style="width:75px">${r}</div><div style="text-align:center;flex:1"><div style="font-size:11px">${esc(c.ministry)}</div><div style="font-size:10px;color:#666">${esc(c.directorate)}</div><div style="font-size:14px;font-weight:900;margin-top:3px">${esc(c.schoolName)}</div></div><div style="width:75px;text-align:right">${l}</div></div><div style="text-align:center;font-size:16px;font-weight:900;border-top:2px solid #000;border-bottom:2px solid #000;padding:6px;margin:8px 0">${esc(c.healthTitle)}</div><div style="font-size:13px;font-weight:bold;margin:10px 0">${esc(c.healthRecipient)}</div><div style="font-size:13px;margin-bottom:8px">${esc(c.healthGreeting)}</div><div style="font-size:13px;margin-bottom:6px">${esc(c.healthBody)}</div><div style="font-size:13px;padding-right:20px;margin:8px 0">${s?esc(s.name):'...................'}</div><div style="font-size:13px;margin-bottom:8px">المقيد بالصف: <b>${s?s.grade+' / '+s.section:'........'}</b></div><div style="font-size:13px;margin:10px 0">${esc(c.healthClosing)}</div>${reason?`<div style="font-size:12px;background:#FEF3C7;padding:6px;border-right:3px solid #F59E0B;margin:8px 0">سبب التحويل: ${esc(reason)}</div>`:''}<div style="display:flex;justify-content:space-between;margin-top:18px;font-size:12px"><div style="text-align:center"><div style="font-weight:bold">${esc(c.healthVisitorTitle)}</div><div style="font-weight:900">${esc(c.healthVisitorName||'...............')}</div><div style="border-top:1px solid #000;padding-top:2px;margin-top:20px;min-width:150px">......................</div></div><div style="text-align:center"><div style="font-weight:bold">${esc(c.principalTitle)}</div><div style="font-weight:900">${esc(c.principalName||'...............')}</div><div style="border-top:1px solid #000;padding-top:2px;margin-top:20px;min-width:150px">......................</div></div></div></div><div style="border:2px solid #000;border-top:0;padding:12px"><div style="font-size:14px;font-weight:900;margin-bottom:10px">النتيجة:</div><div style="min-height:80px;border-bottom:1px dotted #666;margin-bottom:8px"></div><div style="min-height:60px;border-bottom:1px dotted #666;margin-bottom:15px"></div><div style="display:flex;justify-content:space-between;font-size:12px"><div style="text-align:center"><div style="font-weight:bold">توقيع وختم المستشفى</div><div style="min-height:60px"></div><div style="border-top:1px solid #000;padding-top:2px;min-width:150px">......................</div></div><div style="text-align:center"><div style="font-weight:bold">اسم الطبيب: التوقيع</div><div style="min-height:60px"></div><div style="border-top:1px solid #000;padding-top:2px;min-width:150px">......................</div></div></div></div><div style="font-size:11px;margin-top:8px;text-align:center">* ${esc(c.healthReturnNote)}</div><div style="display:flex;justify-content:space-between;font-size:11px;margin-top:6px;padding:6px;border:1px solid #999">${c.healthOptions.map(o=>`<span>☐ ${esc(o)}</span>`).join('')}</div></div>`}
+
+/* ============ الرئيسية ============ */
+function renderHome(){
+  const now=Date.now();const r30=DB.records.filter(x=>now-x.createdAt<=30*864e5);
+  const tp=r30.reduce((s,x)=>s+(x.points||0),0);
+  const al=alerts().length,fu=follow().length;
+  const lR=DB.config.logoR?`<img src="${DB.config.logoR}" style="width:70px;height:70px;object-fit:contain">`:'<div class="ic w-16 h-16 text-3xl" style="background:rgba(255,255,255,.2)">🏫</div>';
+  const lL=DB.config.logoL?`<img src="${DB.config.logoL}" style="width:70px;height:70px;object-fit:contain">`:'<div class="ic w-16 h-16 text-3xl" style="background:rgba(255,255,255,.2)">📚</div>';
+  return `<div class="space-y-6"><div class="hero"><div style="position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap"><div>${lR}</div><div style="text-align:center;flex:1;min-width:200px"><div style="font-size:13px;opacity:.9;font-weight:bold">${esc(DB.config.ministry)}</div><div style="font-size:11px;opacity:.75;margin-top:4px">${esc(DB.config.directorate)}</div><h1 style="font-size:26px;font-weight:900;margin:12px 0">${esc(DB.config.platformName)}</h1><div style="font-size:18px;font-weight:bold;color:#fbbf24">${esc(DB.config.schoolName)}</div><div style="margin-top:16px;display:inline-block;background:rgba(255,255,255,.2);padding:8px 16px;border-radius:999px;font-size:13px;font-weight:bold">📅 ${today()}</div></div><div>${lL}</div></div></div>
+  <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">${st('مخالفات الشهر',r30.length,'📋','#475569,#1e293b')}${st('النقاط',tp,'⚠️','#f43f5e,#be123c')}${st('الطلبة',DB.students.length,'👥','#059669,#065f46')}${st('تنبيهات',al,'🔔','#f59e0b,#d97706')}${st('متابعات',fu,'⏰','#dc2626,#991b1b')}</div>
+  <div><h2 style="font-weight:900;padding-right:12px;border-right:4px solid var(--p);margin-bottom:14px">الوصول السريع</h2>
+  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+  ${hc('entry','✍️','تسجيل سلوك','سجل جديد','#059669,#065f46')}
+  ${hc('records','📋','سجل السلوكيات','عرض السجلات','#475569,#1e293b')}
+  ${hc('analytics','📈','التحليل','رسوم بيانية','#6366f1,#3730a3')}
+  ${hc('students','👥','إدارة الطلبة','القائمة','#0891b2,#155e75')}
+  ${hc('health','❤️','هويتي الصحية','حالات صحية','#e11d48,#9f1239')}
+  ${hc('htrans','🌙','تحويل صحي','نموذج رسمي','#dc2626,#991b1b')}
+  ${hc('hreport','📊','تقرير الوحدة','إحصائية','#8b5cf6,#6d28d9')}
+  ${isAdmin()?hc('users','👤','المستخدمون','المعلمون','#7c3aed,#5b21b6'):''}
+  ${isAdmin()?hc('behaviors','⚠️','السلوكيات','البنود','#dc2626,#991b1b'):''}
+  ${isAdmin()?hc('actions','🎯','الإجراءات','الإجراءات','#f97316,#c2410c'):''}
+  ${hc('reports','📄','التقارير','طباعة','#14b8a6,#115e59')}
+  ${hc('alerts','🔔','التنبيهات','متابعة','#f59e0b,#b45309')}
+  ${isAdmin()?hc('settings','⚙️','الإعدادات','تخصيص','#64748b,#334155'):''}
+  </div></div></div>`;
+}
+function hc(id,ic,t,d,g){return `<button onclick="go('${id}')" class="card text-white rounded-2xl p-5 text-right shadow-lg" style="background:linear-gradient(135deg,${g})"><div class="ic w-14 h-14 mb-3 text-3xl" style="background:rgba(255,255,255,.22)">${ic}</div><div style="font-weight:900;font-size:15px">${t}</div><div style="font-size:12px;opacity:.9;margin-top:4px">${d}</div></button>`}
+function st(t,v,i,g){return `<div class="text-white rounded-2xl p-4 relative overflow-hidden" style="background:linear-gradient(135deg,${g})"><div style="position:absolute;left:-8px;bottom:-8px;opacity:.15;font-size:70px">${i}</div><div style="position:relative"><div style="font-size:12px;opacity:.95;font-weight:600">${t}</div><div style="font-size:28px;font-weight:900;margin-top:4px">${v}</div></div></div>`}
+
+/* ============ تسجيل السلوك ============ */
+let E={sid:'',bid:'',aid:'',note:'',uid:'',an:'',customBeh:'',customAct:'',reviewedBy:''};
+function renderEntry(){
+  if(!E.uid&&DB.users.length)E.uid=DB.users[0].id;
+  const cats=[...new Set(DB.behaviors.filter(b=>b.active).map(b=>b.cat||'أخرى'))];
+  
+  return `<div class="max-w-4xl space-y-4"><header><h1 style="font-size:24px;font-weight:900">✍️ تسجيل سلوك / مخالفة</h1><p style="font-size:13px;color:#64748b;margin-top:4px">📅 ${today()}</p></header><div class="bg-white rounded-2xl p-5 shadow-sm space-y-4">
+  <div><label style="display:block;font-size:14px;font-weight:bold;margin-bottom:8px">🔍 بحث الطالب</label><div class="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2"><div style="position:relative"><input id="sS" placeholder="اكتب اسم الطالب..." autocomplete="off" oninput="sStu('s')" onfocus="sStu('s')" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm"><div id="sD" class="dd hidden"></div></div><select id="sG" onchange="sStu('s')" class="rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm font-bold bg-white"><option value="">كل الصفوف</option>${GR.map(g=>`<option>${g}</option>`).join('')}</select><select id="sSc" onchange="sStu('s')" class="rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm font-bold bg-white"><option value="">كل الشعب</option>${SC.map(s=>`<option>${s}</option>`).join('')}</select></div><div id="sP"></div><div id="hW"></div></div>
+  
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <label style="display:block;font-size:14px;font-weight:bold;margin-bottom:8px">السلوك / المخالفة *</label>
+      <select id="fB" onchange="onBehChange()" class="w-full rounded-xl border-2 border-slate-200 px-3 py-3 text-sm font-bold bg-white">
+        <option value="">— اختر التصنيف —</option>
+        ${cats.map(c=>`<optgroup label="${c}">${DB.behaviors.filter(b=>b.active&&(b.cat||'أخرى')===c).map(b=>`<option value="${b.id}" ${E.bid===b.id?'selected':''}>${esc(b.name)} (${b.points} نقطة)</option>`).join('')}</optgroup>`).join('')}
+      </select>
+    </div>
+    <div>
+      <label style="display:block;font-size:14px;font-weight:bold;margin-bottom:8px">الإجراء المتخذ (تدرج تلقائي) *</label>
+      <select id="fA" onchange="onActChange()" class="w-full rounded-xl border-2 border-slate-200 px-3 py-3 text-sm font-bold bg-white">
+        <option value="">— اختر الإجراء —</option>
+        ${DB.actions.map(a=>`<option value="${a.id}" ${E.aid===a.id?'selected':''}>${esc(a.name)}</option>`).join('')}
+        <option value="CUSTOM" ${E.aid==='CUSTOM'?'selected':''}>--- إجراء آخر (يدوي) ---</option>
+      </select>
+      <div id="suggestMsg" style="font-size:11px;color:#10B981;margin-top:6px;font-weight:bold;display:none;background:#ecfdf5;padding:8px;border-radius:8px;border:1px solid #a7f3d0;line-height:1.6"></div>
+    </div>
+  </div>
+  
+  <div id="customFields" class="hidden bg-blue-50 rounded-xl p-4 border-r-4 border-blue-500 space-y-3">
+    <div id="customBehWrap"><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">اكتب السلوك (مخصص)</label><input id="fCB" oninput="E.customBeh=this.value" value="${esc(E.customBeh)}" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm" placeholder="وصف السلوك..."></div>
+    <div id="customActWrap"><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">اكتب الإجراء (مخصص)</label><input id="fCA" oninput="E.customAct=this.value" value="${esc(E.customAct)}" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm" placeholder="وصف الإجراء..."></div>
+  </div>
+
+  <div id="regBox" class="hidden bg-amber-50 border-r-4 border-amber-500 p-4 rounded-xl">
+    <div style="font-size:12px;font-weight:900;color:#92400e;margin-bottom:4px">📜 نص القرار الوزاري (234/2017) للإجراء المحدد:</div>
+    <div id="regText" style="font-size:13px;color:#78350f;line-height:1.6"></div>
+  </div>
+
+  <div id="aX" class="hidden bg-slate-50 rounded-xl p-4" style="border-right:4px solid #64748b"><div style="font-size:14px;font-weight:bold;color:#334155;margin-bottom:8px">📋 ملاحظات الإجراء</div><input id="fAN" oninput="E.an=this.value" value="${esc(E.an)}" placeholder="اختياري..." class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div>
+  
+  <div class="grid grid-cols-1 gap-4 border-t border-slate-200 pt-4">
+    <div>
+      <label style="display:block;font-size:14px;font-weight:bold;margin-bottom:8px">📝 يراجع الأستاذ</label>
+      <input id="fRev" oninput="E.reviewedBy=this.value" value="${esc(E.reviewedBy)}" placeholder="اسم المعلم المراجع..." class="w-full rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm bg-blue-50">
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label style="display:block;font-size:14px;font-weight:bold;margin-bottom:8px">المستخدم *</label><select id="fU" class="w-full rounded-xl border-2 border-slate-200 px-3 py-3 text-sm font-bold bg-white">${DB.users.map(u=>`<option value="${u.id}" ${E.uid===u.id?'selected':''}>${esc(u.name)} — ${esc(u.title)}</option>`).join('')}</select></div><div><label style="display:block;font-size:14px;font-weight:bold;margin-bottom:8px">ملاحظات عامة</label><input id="fN" oninput="E.note=this.value" value="${esc(E.note)}" placeholder="اختياري..." class="w-full rounded-xl border-2 border-slate-200 px-3 py-3 text-sm"></div></div>
+  
+  <div class="flex gap-2"><button onclick="saveRec()" class="flex-1 bg-p text-white font-black py-3.5 rounded-xl shadow">💾 حفظ السجل</button><button onclick="E={sid:'',bid:'',aid:'',note:'',uid:DB.users[0]?.id||'',an:'',customBeh:'',customAct:'',reviewedBy:''};render()" class="px-5 bg-slate-100 font-bold py-3.5 rounded-xl">مسح</button></div></div></div>`;
+}
+
+function onBehChange(){
+  E.bid=document.getElementById('fB').value;
+  suggestAction();
+}
+
+// 🧠 محرك التدرج الذكي (مطابق تماماً للائحة 234/2017)
+function suggestAction(){
+  if(!E.sid || !E.bid) return;
+  const b=gB(E.bid);
+  if(!b) return;
+  
+  const pastIncidents = DB.records.filter(r => r.studentId === E.sid && r.behaviorId === E.bid);
+  const occurrences = pastIncidents.length; 
+  
+  let suggestedActId = 'A1';
+  let msg = '';
+  let isAbsenceEquiv = false;
+  
+  // 1. معالجة التأخير (المادة 29 و 30)
+  if (b.id === 'B_T') {
+      const totalTardies = occurrences + 1;
+      
+      if (totalTardies === 1) { suggestedActId = 'A1'; msg = `✨ تأخر رقم 1. الإجراء: نصح شفهي.`; }
+      else if (totalTardies === 2) { suggestedActId = 'A2'; msg = `✨ تأخر رقم 2. الإجراء: نصح ورقي.`; }
+      else if (totalTardies === 3) { suggestedActId = 'A3'; msg = `✨ تأخر رقم 3. الإجراء: تنبيه ورقي.`; }
+      else if (totalTardies === 4) { suggestedActId = 'A4'; msg = `✨ تأخر رقم 4. الإجراء: إنذار وتعهد.`; }
+      else if (totalTardies === 5) { 
+          suggestedActId = 'A5'; 
+          isAbsenceEquiv = true;
+          msg = `<span style="color:#dc2626">⚠️ تنبيه هام:</span> هذا التأخر رقم 5. ووفقاً للائحة يُعد غياباً ليوم دراسي كامل. الإجراء: دراسة حالة.`;
+      } else {
+          isAbsenceEquiv = true;
+          const absDays = Math.floor(totalTardies / 5);
+          if (absDays === 1) suggestedActId = 'A2'; // 2 days absence (level 1)
+          else if (absDays === 2) suggestedActId = 'A3'; // 5 days absence (level 2)
+          else if (absDays === 3) suggestedActId = 'A4'; // 8 days absence (level 3)
+          else if (absDays === 4) suggestedActId = 'A5'; // 10 days absence (level 4)
+          else if (absDays >= 5) suggestedActId = 'A9'; // 15+ days absence (level 5)
+          
+          msg = `<span style="color:#dc2626">⚠️ تنبيه هام:</span> هذا التأخر رقم ${totalTardies}، ويعادل ${absDays} يوم غياب. تم تصعيد الإجراء إلى إجراءات الغياب بناءً على اللائحة.`;
+      }
+  } 
+  // 2. معالجة الغياب (المادة 33)
+  else if (b.cat === 'غياب') {
+      if(b.id === 'B_G1') suggestedActId = 'A2'; // يومان
+      if(b.id === 'B_G2') suggestedActId = 'A3'; // 5 أيام
+      if(b.id === 'B_G3') suggestedActId = 'A4'; // 8 أيام
+      if(b.id === 'B_G4') suggestedActId = 'A5'; // 10 أيام
+      if(b.id === 'B_G5') suggestedActId = 'A9'; // 15 يوم
+      if(b.id === 'B_G6') suggestedActId = 'A10'; // 30 يوم
+      if(b.id === 'B_G7') suggestedActId = 'A12'; // 45 يوم
+      msg = `✨ تم اقتراح الإجراء وفقاً لجدول الغياب في اللائحة.`;
+  } 
+  // 3. التدرج العام لبقية السلوكيات (وفق المادة 39)
+  else {
+      // تم إعادة ضبط المستويات لتطابق البنود (أ=1، ب=2، ج=3، د=4، هـ=5، و=6، ز=7)
+      let escalatedLevel = (b.level || 1) + occurrences;
+      if (escalatedLevel > 7) escalatedLevel = 7;
+      
+      if(escalatedLevel === 1) suggestedActId = 'A2'; // (بند أ) نصح ورقي
+      else if(escalatedLevel === 2) suggestedActId = 'A3'; // (بند ب) تنبيه
+      else if(escalatedLevel === 3) suggestedActId = 'A4'; // (بند ج) إنذار
+      else if(escalatedLevel === 4) suggestedActId = 'A5'; // (بند د) دراسة حالة
+      else if(escalatedLevel === 5) suggestedActId = 'A6'; // (بند هـ) فصل 3 أيام
+      else if(escalatedLevel === 6) suggestedActId = 'A8'; // (بند و) رفع للجنة 5-10 أيام
+      else if(escalatedLevel >= 7) suggestedActId = 'A11'; // (بند ز) نقل/فصل نهائي
+      
+      if(occurrences > 0) {
+        msg = `✨ تدرج تلقائي بناءً على:<br>
+        • مستوى السلوك الأساسي: ${b.level}<br>
+        • مرات التكرار السابقة: ${occurrences}<br>
+        • المستوى النهائي المقترح: ${escalatedLevel}`;
+      } else {
+        msg = `✨ هذا هو تسجيل المرة الأولى لهذا السلوك (المستوى ${b.level}).`;
+      }
+  }
+
+  if(!gA(suggestedActId)) suggestedActId = 'A1';
+  
+  E.aid=suggestedActId;
+  const actSelect=document.getElementById('fA');
+  const suggestMsg=document.getElementById('suggestMsg');
+  
+  if(actSelect){
+    actSelect.value=E.aid;
+    actSelect.style.borderColor='#10B981'; 
+    setTimeout(()=>actSelect.style.borderColor='#e2e8f0', 1500);
+  }
+  
+  if(suggestMsg) {
+    suggestMsg.style.display='block';
+    suggestMsg.innerHTML = msg;
+  }
+  
+  onActChange();
+}
+
+function onActChange(){
+  E.aid=document.getElementById('fA').value;
+  const regBox=document.getElementById('regBox');
+  const regText=document.getElementById('regText');
+  const customFields=document.getElementById('customFields');
+  const aX=document.getElementById('aX');
+
+  if(E.aid==='CUSTOM'){
+    customFields.classList.remove('hidden');
+    regBox.classList.add('hidden');
+    document.getElementById('customActWrap').style.display='block';
+    document.getElementById('customBehWrap').style.display='block';
+    aX.classList.remove('hidden');
+  } else {
+    customFields.classList.add('hidden');
+    const a=gA(E.aid);
+    if(a&&a.desc){
+      regBox.classList.remove('hidden');
+      regText.textContent=a.desc;
+      aX.classList.remove('hidden');
+    } else {
+      regBox.classList.add('hidden');
+      aX.classList.add('hidden');
+    }
+  }
+}
+
+function sStu(p){
+  const q=document.getElementById(p+'S').value.trim();
+  const g=document.getElementById(p+'G').value;
+  const s=document.getElementById(p+'Sc').value;
+  const d=document.getElementById(p+'D');
+  const list=DB.students.filter(x=>{if(g&&x.grade!==+g)return false;if(s&&x.section!==+s)return false;if(q&&!x.name.includes(q))return false;return true}).sort((a,b)=>a.name.localeCompare(b.name,'ar')).slice(0,30);
+  if(!list.length){d.innerHTML='<div style="padding:16px;text-align:center;color:#94a3b8;font-size:13px">لا نتائج</div>';d.classList.remove('hidden');return}
+  d.innerHTML=list.map(x=>{let n=esc(x.name);if(q){const i=x.name.indexOf(q);if(i>=0)n=esc(x.name.slice(0,i))+`<span style="background:#FEF3C7;font-weight:900">${esc(x.name.slice(i,i+q.length))}</span>`+esc(x.name.slice(i+q.length))}return `<div class="ddi" onclick="pickS('${x.id}','${p}')"><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:bold">${n}</div><div style="font-size:12px;color:#64748b">صف ${x.grade} · شعبة ${x.section}${x.phone?' · 📞 '+esc(x.phone):''}</div></div></div>`}).join('');
+  d.classList.remove('hidden');
+}
+function pickS(sid,p){
+  const s=gS(sid);if(!s)return;
+  document.getElementById(p+'S').value=s.name;
+  document.getElementById(p+'D').classList.add('hidden');
+  document.getElementById(p+'D').innerHTML='';
+  if(p==='s'){
+    E.sid=sid;
+    document.getElementById('sP').innerHTML=`<div style="margin-top:8px;padding:12px;border-radius:12px;background:var(--s);border:2px solid var(--p);display:flex;gap:12px;align-items:center"><div style="width:40px;height:40px;border-radius:12px;background:var(--p);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900">${esc(s.name.charAt(0))}</div><div style="flex:1"><div style="font-weight:bold;font-size:14px">${esc(s.name)}</div><div style="font-size:12px;color:#64748b">صف ${s.grade} · شعبة ${s.section}</div></div><button onclick="E.sid='';document.getElementById('sS').value='';document.getElementById('sP').innerHTML='';document.getElementById('hW').innerHTML='';document.getElementById('suggestMsg').style.display='none'" style="color:#dc2626;font-size:12px;font-weight:bold">✕</button></div>`;
+    chkH();
+    suggestAction();
+  }
+}
+function chkH(){const h=DB.health.find(x=>x.studentId===E.sid);const w=document.getElementById('hW');if(h)w.innerHTML=`<div style="margin-top:12px;background:#fff1f2;padding:12px;border-radius:12px;border-right:4px solid #e11d48"><div style="font-size:12px;font-weight:900;color:#be123c;margin-bottom:4px">❤️ حالة صحية مسجلة</div><div style="font-size:12px;color:#9f1239"><b>الحالة:</b> ${esc(h.condition)}</div>${h.notes?`<div style="font-size:12px;color:#9f1239;margin-top:4px"><b>ملاحظات:</b> ${esc(h.notes)}</div>`:''}<div style="font-size:10px;color:#e11d48;margin-top:4px">⚠️ لا تظهر في التقارير المطبوعة</div></div>`;else w.innerHTML=''}
+document.addEventListener('click',e=>{
+  document.querySelectorAll('.dd:not(.hidden)').forEach(d=>{
+    const w=d.parentElement;
+    if(w&&!w.contains(e.target))d.classList.add('hidden');
+  });
+});
+
+function saveRec(){
+  if(!E.sid){toast('اختر الطالب','err');return}
+  if(!E.bid){toast('اختر السلوك','err');return}
+  if(!E.aid){toast('اختر الإجراء','err');return}
+  const uid=document.getElementById('fU')?.value||E.uid||DB.users[0]?.id;
+  if(!uid){toast('اختر المستخدم','err');return}
+  
+  const b=gB(E.bid);
+  let finalBehName = b ? b.name : '';
+  let finalPoints = b ? b.points : 0;
+  let finalRegText = '';
+  
+  if(E.bid==='B_OTHER'){
+    finalBehName = E.customBeh || 'سلوك غير محدد';
+  }
+
+  if(E.aid==='CUSTOM'){
+    finalRegText = 'إجراء مخصص (غير مذكور صراحة في النص اللائحي)';
+  } else {
+    const a = gA(E.aid);
+    finalRegText = a ? a.desc : '';
+  }
+
+  E.uid=uid;
+  const u=gU(uid);
+  
+  DB.followups=DB.followups.filter(f=>f.studentId!==E.sid||f.resolved);
+  
+  const pastIncidents = DB.records.filter(r => r.studentId === E.sid && r.behaviorId === E.bid);
+  const occurrenceCount = pastIncidents.length + 1;
+
+  let isAbsenceEquiv = false;
+  if (E.bid === 'B_T' && occurrenceCount >= 5) {
+      isAbsenceEquiv = true;
+  }
+
+  const r={
+    id:uid0('R'), studentId:E.sid,
+    behaviorId:E.bid, behaviorName:finalBehName,
+    actionId:E.aid, actionName:(E.aid==='CUSTOM'? (E.customAct||'إجراء مخصص') : (gA(E.aid)?.name||'')),
+    regulationText:finalRegText,
+    userId:uid, userName:u?u.name:'', userTitle:u?u.title:'',
+    points:finalPoints, note:E.note, actionNote:E.an, createdAt:Date.now(),
+    occurrenceCount: occurrenceCount,
+    reviewedBy: E.reviewedBy,
+    isAbsenceEquiv: isAbsenceEquiv
+  };
+  
+  DB.records.unshift(r);
+  save();toast('✓ تم الحفظ');
+  showActions(r.id);
+  E={sid:'',bid:'',aid:'',note:'',uid:DB.users[0]?.id||'',an:'',customBeh:'',customAct:'',reviewedBy:''};
+  render();
+}
+function uid0(p){return p+Date.now()+Math.floor(Math.random()*1000)}
+function showActions(rid){
+  document.getElementById('mdl').innerHTML=`<div class="mdl" onclick="if(event.target===this)this.remove()"><div class="bg-white rounded-2xl p-6 w-full max-w-md"><div style="text-align:center;margin-bottom:16px"><div style="width:64px;height:64px;border-radius:50%;background:var(--s);color:var(--p);margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:30px">✓</div><h3 style="font-weight:900;font-size:18px;margin-top:8px">تم حفظ السجل</h3></div><div style="display:flex;flex-direction:column;gap:8px"><button onclick="pRec('${rid}');this.closest('.mdl').remove()" class="w-full bg-p text-white font-bold py-3 rounded-xl">🖨️ طباعة النموذج</button><button onclick="waRec('${rid}');this.closest('.mdl').remove()" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl">💬 واتساب (نص)</button><button onclick="waRecPDF('${rid}');this.closest('.mdl').remove()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl">📄 واتساب (PDF)</button><button onclick="this.closest('.mdl').remove()" class="w-full bg-slate-100 font-bold py-2.5 rounded-xl">إغلاق</button></div></div></div>`;
+}
+
+/* ============ السجل ============ */
+let RF={q:'',g:'',sc:'',f:'',t:''};
+function renderRecords(){
+  const list=fr();const tp=list.reduce((s,r)=>s+(r.points||0),0);
+  return `<div class="space-y-4"><header style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px"><div><h1 style="font-size:24px;font-weight:900">📋 سجل السلوكيات</h1><p style="font-size:13px;color:#64748b;margin-top:4px">${list.length} سجل · ${tp} نقطة</p></div><div style="display:flex;gap:8px"><button onclick="xls()" class="bg-white border-2 border-slate-200 font-bold px-4 py-2 rounded-xl text-sm">📊 Excel</button><button onclick="pRecs()" class="bg-white border-2 border-slate-200 font-bold px-4 py-2 rounded-xl text-sm">🖨️ طباعة</button></div></header>
+  <div class="bg-white rounded-2xl p-4 shadow-sm space-y-3"><div class="grid grid-cols-2 md:grid-cols-5 gap-2"><input id="rfQ" value="${esc(RF.q)}" oninput="RF.q=this.value;render()" placeholder="🔍 بحث..." class="rounded-xl border-2 border-slate-200 px-3 py-2 text-sm col-span-2 md:col-span-1"><select onchange="RF.g=this.value;render()" class="rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-bold bg-white"><option value="">كل الصفوف</option>${GR.map(g=>`<option ${RF.g==g?'selected':''}>${g}</option>`).join('')}</select><select onchange="RF.sc=this.value;render()" class="rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-bold bg-white"><option value="">كل الشعب</option>${SC.map(s=>`<option ${RF.sc==s?'selected':''}>${s}</option>`).join('')}</select><input type="date" value="${RF.f}" onchange="RF.f=this.value;render()" class="rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"><input type="date" value="${RF.t}" onchange="RF.t=this.value;render()" class="rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div><button onclick="RF={q:'',g:'',sc:'',f:'',t:''};render()" style="font-size:12px;font-weight:bold;color:#64748b">✕ مسح</button></div>
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden"><div style="overflow-x:auto"><table style="width:100%;font-size:14px"><thead style="background:#f8fafc;border-bottom:1px solid #e2e8f0"><tr style="text-align:right"><th style="padding:12px;font-weight:900;font-size:12px">التاريخ (المسجل)</th><th style="padding:12px;font-weight:900;font-size:12px">الطالب</th><th style="padding:12px;font-weight:900;font-size:12px">الصف</th><th style="padding:12px;font-weight:900;font-size:12px">السلوك (التكرار)</th><th style="padding:12px;font-weight:900;font-size:12px">النقاط</th><th style="padding:12px;font-weight:900;font-size:12px">الإجراء</th><th style="padding:12px;font-weight:900;font-size:12px" class="np">إجراءات</th></tr></thead><tbody>${list.map(r=>{const s=gS(r.studentId);const fu=DB.followups.find(f=>f.recordId===r.id);const fs=fu?(fu.status==='yes'?'<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:#d1fae5;color:#065f46;font-weight:bold">حضر</span>':fu.status==='no'?'<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:#fee2e2;color:#991b1b;font-weight:bold">لم يحضر</span>':'<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:#fef3c7;color:#92400e;font-weight:bold">⏰</span>'):'';return `<tr style="border-bottom:1px solid #f1f5f9"><td style="padding:12px;font-size:12px">${fmtD(r.createdAt)}<br><span style="font-size:10px;color:#64748b">👤 ${esc(r.userName||'—')}</span></td><td style="padding:12px;font-weight:bold;font-size:12px">${s?esc(s.name):'—'}</td><td style="padding:12px;font-size:12px">${s?s.grade+'/'+s.section:'—'}</td><td style="padding:12px;font-size:12px">${esc(r.behaviorName||'—')} ${r.occurrenceCount>1||r.isAbsenceEquiv?`<span style="background:#fee2e2;color:#dc2626;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:bold">المرة ${r.occurrenceCount}</span>`:''}${r.isAbsenceEquiv?'<br><span style="font-size:10px;color:#dc2626;font-weight:bold">(يعادل غياب)</span>':''}</td><td style="padding:12px;font-size:12px;font-weight:bold;color:#dc2626">${r.points||0}</td><td style="padding:12px;font-size:12px">${esc(r.actionName||'—')} ${fs}</td><td style="padding:12px" class="np"><div style="display:flex;gap:4px"><button onclick="pRec('${r.id}')" style="padding:6px;border-radius:8px" title="طباعة">🖨️</button><button onclick="waRec('${r.id}')" style="padding:6px;border-radius:8px" title="واتساب">💬</button><button onclick="waRecPDF('${r.id}')" style="padding:6px;border-radius:8px" title="PDF">📄</button><button onclick="delRec('${r.id}')" style="padding:6px;border-radius:8px" title="حذف">🗑️</button></div></td></tr>`}).join('')}${list.length===0?'<tr><td colspan="7" style="text-align:center;padding:48px;color:#94a3b8">لا سجلات</td></tr>':''}</tbody></table></div></div></div>`;
+}
+function fr(){return DB.records.filter(r=>{const s=gS(r.studentId);if(!s)return false;if(RF.q){const x=RF.q.trim();if(!(s.name.includes(x)||(r.behaviorName||'').includes(x)))return false}if(RF.g&&s.grade!==+RF.g)return false;if(RF.sc&&s.section!==+RF.sc)return false;if(RF.f&&r.createdAt<new Date(RF.f).getTime())return false;if(RF.t&&r.createdAt>new Date(RF.t).getTime()+864e5)return false;return true})}
+function delRec(id){if(!confirm('حذف؟'))return;DB.records=DB.records.filter(r=>r.id!==id);DB.followups=DB.followups.filter(f=>f.recordId!==id);save();render()}
+function xls(){const rows=[['التاريخ','المسجل','الطالب','الصف','الشعبة','السلوك','التكرار','النقاط','الإجراء','نص اللائحة']];fr().forEach(r=>{const s=gS(r.studentId);rows.push([fmtD(r.createdAt),r.userName||'',s?s.name:'',s?s.grade:'',s?s.section:'',r.behaviorName||'',r.occurrenceCount||1,r.points||0,r.actionName||'',r.regulationText||''])});const ws=XLSX.utils.aoa_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'المخالفات');XLSX.writeFile(wb,'سجل.xlsx')}
+function pRec(id){const r=DB.records.find(x=>x.id===id);if(!r)return;prt(recordHTML(r))}
+function waRec(id){
+  const r=DB.records.find(x=>x.id===id);if(!r)return;
+  const s=gS(r.studentId);if(!s||!s.phone){toast('لا رقم','err');return}
+  const msgTemplate = DB.config.waBehavior || 'رسالة للمخالفة';
+  const msg = fill(msgTemplate, {
+    student:s.name, grade:s.grade, section:s.section,
+    behavior:r.behaviorName||'', points:r.points||0,
+    action:r.actionName||'', desc:r.regulationText||'',
+    date:fmtDT(r.createdAt), school:DB.config.schoolName,
+    notes:r.actionNote||''
+  });
+  wa(s.phone,msg);
+}
+function waRecPDF(id){const r=DB.records.find(x=>x.id===id);if(!r)return;const s=gS(r.studentId);if(!s||!s.phone){toast('لا رقم','err');return}const fn=`تقرير_${s.name.replace(/\s+/g,'_')}.pdf`;pdf(recordHTML(r),fn,s.phone,fill(DB.config.waBehavior,{student:s.name,grade:s.grade,section:s.section,behavior:r.behaviorName||'',points:r.points||0,action:r.actionName||'',desc:r.regulationText||'',date:fmtDT(r.createdAt),school:DB.config.schoolName,notes:r.actionNote||''}))}
+function pRecs(){const list=fr();const rows=list.map(r=>{const s=gS(r.studentId);return `<tr><td style="border:1px solid #999;padding:5px;font-size:10px">${fmtD(r.createdAt)}</td><td style="border:1px solid #999;padding:5px;font-size:10px">${s?esc(s.name):''}</td><td style="border:1px solid #999;padding:5px;font-size:10px;text-align:center">${s?s.grade+'/'+s.section:''}</td><td style="border:1px solid #999;padding:5px;font-size:10px">${esc(r.behaviorName||'')}</td><td style="border:1px solid #999;padding:5px;font-size:10px;text-align:center;color:#DC2626;font-weight:bold">${r.points||0}</td><td style="border:1px solid #999;padding:5px;font-size:10px">${esc(r.actionName||'')}</td></tr>`}).join('');prt(`<div style="max-width:900px;margin:auto">${rHdr()}<div style="text-align:center;font-weight:900;font-size:14px;margin-bottom:12px">كشف المخالفات (${list.length})</div><table style="width:100%;border-collapse:collapse;font-size:10px"><thead><tr style="background:var(--c-primary);color:white"><th style="border:1px solid #999;padding:6px">التاريخ</th><th style="border:1px solid #999;padding:6px">الطالب</th><th style="border:1px solid #999;padding:6px">الصف</th><th style="border:1px solid #999;padding:6px">المخالفة</th><th style="border:1px solid #999;padding:6px">النقاط</th><th style="border:1px solid #999;padding:6px">الإجراء</th></tr></thead><tbody>${rows}</tbody></table>${rFtr()}</div>`)}
+
+/* ============ التحليل ============ */
+let AF={f:'',t:'',g:'',sc:'',p:'month'};
+let charts={};
+function setP(p){const n=new Date(),e=n.getTime();let s=0;if(p==='week')s=e-7*864e5;else if(p==='month')s=e-30*864e5;else if(p==='term')s=e-90*864e5;else if(p==='year')s=e-365*864e5;AF.p=p;AF.f=s?new Date(s).toISOString().slice(0,10):'';AF.t=new Date(e).toISOString().slice(0,10);render()}
+function ana(){
+  let r=DB.records.slice();
+  if(AF.f)r=r.filter(x=>x.createdAt>=new Date(AF.f).getTime());
+  if(AF.t)r=r.filter(x=>x.createdAt<=new Date(AF.t).getTime()+864e5);
+  if(AF.g)r=r.filter(x=>{const s=gS(x.studentId);return s&&s.grade===+AF.g});
+  if(AF.sc)r=r.filter(x=>{const s=gS(x.studentId);return s&&s.section===+AF.sc});
+  const bc={};r.forEach(x=>{const k=x.behaviorName||'—';bc[k]=(bc[k]||0)+1});
+  const b=Object.entries(bc).map(([n,c])=>({name:n,count:c})).sort((a,b)=>b.count-a.count);
+  const gc={};r.forEach(x=>{const s=gS(x.studentId);if(s)gc[s.grade]=(gc[s.grade]||0)+1});
+  const g=GR.map(x=>({grade:x,count:gc[x]||0}));
+  const sc={};r.forEach(x=>{const s=gS(x.studentId);if(!s)return;const k=s.grade+'|'+s.section;if(!sc[k])sc[k]={grade:s.grade,section:s.section,count:0};sc[k].count++});
+  const sec=Object.values(sc).sort((a,b)=>b.count-a.count);
+  const ac={};r.forEach(x=>{const k=x.actionName||'—';ac[k]=(ac[k]||0)+1});
+  const a=Object.entries(ac).map(([n,c])=>({name:n,count:c})).sort((a,b)=>b.count-a.count);
+  const uc={};r.forEach(x=>{uc[x.studentId]=(uc[x.studentId]||0)+1});
+  const u=Object.entries(uc).map(([sid,c])=>({student:gS(sid),count:c})).filter(x=>x.student).sort((a,b)=>b.count-a.count).slice(0,10);
+  return {b,g,sec,a,u,total:r.length};
+}
+function renderAnalytics(){
+  const A=ana();
+  return `<div class="space-y-5"><header><h1 style="font-size:24px;font-weight:900">📈 التحليل المتقدم</h1><p style="font-size:13px;color:#64748b;margin-top:4px">📅 ${today()} · ${A.total} مخالفة</p></header>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">${st('إجمالي المخالفات',A.total,'📋','#475569,#1e293b')}${st('أنواع المخالفات',A.b.length,'⚠️','#dc2626,#991b1b')}${st('الصفوف',A.g.filter(x=>x.count>0).length+'/5','🏫','#0891b2,#155e75')}${st('الشعب',A.sec.length,'👥','#7c3aed,#5b21b6')}</div>
+  <div class="bg-white rounded-2xl p-4 shadow-sm space-y-3"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span style="font-size:12px;font-weight:bold;color:#64748b">الفترة:</span>${['week|أسبوع','month|شهر','term|فصل','year|سنة'].map(x=>{const[p,l]=x.split('|');return `<button onclick="setP('${p}')" style="padding:6px 12px;border-radius:8px;font-size:12px;font-weight:bold;${AF.p===p?'background:var(--p);color:#fff':'background:#f1f5f9'}">${l}</button>`}).join('')}<button onclick="AF={f:'',t:'',g:'',sc:'',p:'all'};render()" style="padding:6px 12px;border-radius:8px;font-size:12px;font-weight:bold;${AF.p==='all'?'background:var(--p);color:#fff':'background:#f1f5f9'}">الكل</button></div>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-2"><input type="date" value="${AF.f}" onchange="AF.f=this.value;AF.p='';render()" class="rounded-xl border-2 border-slate-200 px-3 py-2 text-xs"><input type="date" value="${AF.t}" onchange="AF.t=this.value;AF.p='';render()" class="rounded-xl border-2 border-slate-200 px-3 py-2 text-xs"><select onchange="AF.g=this.value;render()" class="rounded-xl border-2 border-slate-200 px-3 py-2 text-xs font-bold bg-white"><option value="">كل الصفوف</option>${GR.map(x=>`<option ${AF.g==x?'selected':''}>${x}</option>`).join('')}</select><select onchange="AF.sc=this.value;render()" class="rounded-xl border-2 border-slate-200 px-3 py-2 text-xs font-bold bg-white"><option value="">كل الشعب</option>${SC.map(x=>`<option ${AF.sc==x?'selected':''}>${x}</option>`).join('')}</select></div></div>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+  <div class="bg-white rounded-2xl p-5 shadow-sm"><h3 style="font-weight:900;margin-bottom:12px">🍩 الإجراءات</h3><div style="position:relative;height:260px"><canvas id="cA"></canvas></div><div style="margin-top:12px">${A.a.slice(0,6).map((x,i)=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #f1f5f9"><span>${i+1}. ${esc(x.name)}</span><span style="font-weight:900;color:var(--p)">${x.count} (${A.total?Math.round(x.count/A.total*100):0}%)</span></div>`).join('')}</div></div>
+  <div class="bg-white rounded-2xl p-5 shadow-sm"><h3 style="font-weight:900;margin-bottom:12px">📊 حسب الصفوف</h3><div style="position:relative;height:260px"><canvas id="cG"></canvas></div><div style="margin-top:12px;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;text-align:center">${A.g.map(x=>`<div style="background:#f8fafc;border-radius:8px;padding:4px"><div style="font-size:10px;color:#64748b;font-weight:bold">صف ${x.grade}</div><div style="font-size:16px;font-weight:900;color:var(--p)">${x.count}</div></div>`).join('')}</div></div>
+  <div class="bg-white rounded-2xl p-5 shadow-sm"><h3 style="font-weight:900;margin-bottom:12px">🔝 المخالفات المتكررة</h3><div style="position:relative;height:280px"><canvas id="cB"></canvas></div></div>
+  <div class="bg-white rounded-2xl p-5 shadow-sm"><h3 style="font-weight:900;margin-bottom:12px">👥 الشعب (بالصف)</h3><div style="position:relative;height:280px"><canvas id="cS"></canvas></div></div>
+  </div>
+  <div class="bg-white rounded-2xl p-5 shadow-sm"><h3 style="font-weight:900;margin-bottom:16px">👤 أكثر الطلبة</h3><table style="width:100%;font-size:14px"><thead style="background:#f8fafc;border-bottom:1px solid #e2e8f0"><tr style="text-align:right"><th style="padding:8px;font-weight:900;font-size:12px">#</th><th style="padding:8px;font-weight:900;font-size:12px">الطالب</th><th style="padding:8px;font-weight:900;font-size:12px">الصف/الشعبة</th><th style="padding:8px;font-weight:900;font-size:12px">العدد</th></tr></thead><tbody>${A.u.map((x,i)=>`<tr style="border-bottom:1px solid #f1f5f9"><td style="padding:8px;font-weight:bold;color:${i<3?'#dc2626':'#64748b'}">${i+1}</td><td style="padding:8px;font-weight:bold;font-size:12px">${esc(x.student.name)}</td><td style="padding:8px;font-size:12px">${x.student.grade}/${x.student.section}</td><td style="padding:8px;font-weight:900;color:#dc2626;font-size:12px">${x.count}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+function drawCharts(){
+  Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}});charts={};
+  const A=ana();
+  const p=getComputedStyle(document.documentElement).getPropertyValue('--p').trim()||'#047857';
+  const pal=['#047857','#0284C7','#7C3AED','#D97706','#DC2626','#0D9488','#4F46E5','#C026D3'];
+  if(document.getElementById('cA')){const t=A.a.slice(0,6),tt=t.reduce((s,x)=>s+x.count,0)||1;charts.a=new Chart(document.getElementById('cA'),{type:'doughnut',data:{labels:t.map(x=>x.name),datasets:[{data:t.map(x=>x.count),backgroundColor:pal,borderWidth:3,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed} (${Math.round(c.parsed/tt*100)}%)`}}}}})}
+  if(document.getElementById('cG')){charts.g=new Chart(document.getElementById('cG'),{type:'bar',data:{labels:A.g.map(x=>'صف '+x.grade),datasets:[{data:A.g.map(x=>x.count),backgroundColor:p,borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1,precision:0}}}}})}
+  if(document.getElementById('cB')){const t=A.b.slice(0,7);charts.b=new Chart(document.getElementById('cB'),{type:'bar',data:{labels:t.map(x=>x.name),datasets:[{data:t.map(x=>x.count),backgroundColor:'#DC2626',borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1,precision:0}}}}})}
+  if(document.getElementById('cS')){const t=A.sec.slice(0,8);charts.s=new Chart(document.getElementById('cS'),{type:'bar',data:{labels:t.map(x=>`شعبة ${x.section} - صف ${x.grade}`),datasets:[{data:t.map(x=>x.count),backgroundColor:'#7C3AED',borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1,precision:0}}}}})}
+}
+
+/* ============ الطلبة ============ */
+let SF={q:'',g:'',sc:''};
+function renderStudents(){
+  const list=DB.students.filter(s=>{if(SF.q&&!s.name.includes(SF.q))return false;if(SF.g&&s.grade!==+SF.g)return false;if(SF.sc&&s.section!==+SF.sc)return false;return true}).sort((a,b)=>a.grade-b.grade||a.section-b.section||a.name.localeCompare(b.name,'ar'));
+  return `<div class="space-y-4"><header style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px"><div><h1 style="font-size:24px;font-weight:900">👥 إدارة الطلبة</h1><p style="font-size:13px;color:#64748b;margin-top:4px">${DB.students.length} طالب</p></div><div style="display:flex;gap:8px"><button onclick="imp()" class="bg-p text-white font-bold px-4 py-2.5 rounded-xl text-sm">📥 رفع</button><button onclick="edStu('')" class="bg-white border-2 border-slate-200 font-bold px-4 py-2.5 rounded-xl text-sm">+ إضافة</button></div></header>
+  <div class="bg-white rounded-2xl p-4 shadow-sm space-y-3"><div class="grid grid-cols-1 md:grid-cols-3 gap-2"><input id="sfQ" value="${esc(SF.q)}" oninput="SF.q=this.value;render()" placeholder="🔍 بحث..." class="rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"><select onchange="SF.g=this.value;render()" class="rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-bold bg-white"><option value="">كل الصفوف</option>${GR.map(g=>`<option ${SF.g==g?'selected':''}>${g}</option>`).join('')}</select><select onchange="SF.sc=this.value;render()" class="rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-bold bg-white"><option value="">كل الشعب</option>${SC.map(s=>`<option ${SF.sc==s?'selected':''}>${s}</option>`).join('')}</select></div>${(SF.q||SF.g||SF.sc)?`<button onclick="SF={q:'',g:'',sc:''};render()" style="font-size:12px;font-weight:bold;color:#dc2626">✕ مسح الفلاتر</button>`:''}</div>
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden"><div style="overflow-x:auto"><table style="width:100%;font-size:14px"><thead style="background:#f8fafc;border-bottom:1px solid #e2e8f0"><tr style="text-align:right"><th style="padding:12px;font-weight:900;font-size:12px">#</th><th style="padding:12px;font-weight:900;font-size:12px">الاسم</th><th style="padding:12px;font-weight:900;font-size:12px">الصف</th><th style="padding:12px;font-weight:900;font-size:12px">الشعبة</th><th style="padding:12px;font-weight:900;font-size:12px">هاتف</th><th style="padding:12px;font-weight:900;font-size:12px">❤️</th><th style="padding:12px;font-weight:900;font-size:12px">المخالفات</th><th style="padding:12px;font-weight:900;font-size:12px">إجراءات</th></tr></thead><tbody>${list.map((s,i)=>{const st=stats(s.id);const h=DB.health.some(x=>x.studentId===s.id);return `<tr style="border-bottom:1px solid #f1f5f9"><td style="padding:12px;font-size:12px;color:#94a3b8">${i+1}</td><td style="padding:12px;font-weight:bold;font-size:12px">${esc(s.name)}</td><td style="padding:12px;font-size:12px">${s.grade}</td><td style="padding:12px;font-size:12px">${s.section}</td><td style="padding:12px;font-size:12px">${s.phone?esc(s.phone):'—'}</td><td style="padding:12px;font-size:12px">${h?'❤️':'—'}</td><td style="padding:12px;font-size:12px;font-weight:bold;color:#dc2626">${st.count}</td><td style="padding:12px"><button onclick="edStu('${s.id}')" style="padding:6px;border-radius:8px">✏️</button></td></tr>`}).join('')}${list.length===0?'<tr><td colspan="8" style="text-align:center;padding:48px;color:#94a3b8">لا طلبة</td></tr>':''}</tbody></table></div></div></div>`;
+}
+function imp(){document.getElementById('mdl').innerHTML=`<div class="mdl" onclick="if(event.target===this)this.remove()"><div class="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto"><h3 style="font-weight:900;font-size:18px;margin-bottom:16px">رفع قائمة الطلبة</h3><div style="margin-bottom:16px"><label style="display:block;font-size:14px;font-weight:bold;margin-bottom:8px">لصق من Excel</label><p style="font-size:12px;color:#64748b;margin-bottom:8px">كل سطر: الاسم، الصف، الشعبة، رقم ولي الأمر</p><textarea id="pA" rows="8" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-mono"></textarea></div><div style="margin-bottom:16px"><label style="display:block;font-size:14px;font-weight:bold;margin-bottom:8px">أو ملف Excel</label><input type="file" id="xF" accept=".xlsx,.xls,.csv" class="text-sm"></div><div style="margin-bottom:16px"><label style="display:flex;gap:8px;font-size:14px"><input type="checkbox" id="rA">حذف الطلبة الحاليين</label></div><div style="display:flex;gap:8px"><button onclick="doImp()" class="flex-1 bg-p text-white font-bold py-2.5 rounded-xl">رفع</button><button onclick="this.closest('.mdl').remove()" class="px-5 bg-slate-100 font-bold py-2.5 rounded-xl">إلغاء</button></div></div></div>`}
+function doImp(){
+  const p=document.getElementById('pA').value.trim(),f=document.getElementById('xF').files[0],r=document.getElementById('rA').checked;
+  const imp=[];
+  const ps=l=>{const parts=l.split(/[,\t،]/).map(x=>x.trim()).filter(x=>x);if(parts.length<3)return null;const[n,g,s,ph]=parts;const gn=parseInt(g),sn=parseInt(s);if(!n||isNaN(gn)||isNaN(sn)||!GR.includes(gn))return null;return{name:n,grade:gn,section:sn,phone:ph||''}};
+  if(p)p.split('\n').forEach(l=>{const x=ps(l);if(x)imp.push(x)});
+  const proc=rows=>{rows.forEach(row=>{const[n,g,s,ph]=row.map(x=>String(x==null?'':x).trim());const gn=parseInt(g),sn=parseInt(s);if(n&&!isNaN(gn)&&!isNaN(sn)&&GR.includes(gn))imp.push({name:n,grade:gn,section:sn,phone:ph||''})});fin()};
+  const fin=()=>{if(!imp.length){toast('لا طلبة','err');return}if(r)DB.students=[];const ex=new Set(DB.students.map(s=>s.name+'|'+s.grade+'|'+s.section));let a=0,sk=0;imp.forEach(x=>{const k=x.name+'|'+x.grade+'|'+x.section;if(ex.has(k)){sk++;return}ex.add(k);DB.students.push({id:uid0('S'),...x});a++});save();document.getElementById('mdl').innerHTML='';toast(`✓ ${a} طالب`);render()};
+  if(f){const r=new FileReader();r.onload=e=>{try{const d=new Uint8Array(e.target.result);const wb=XLSX.read(d,{type:'array'});proc(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''}))}catch(x){toast('خطأ','err')}};r.readAsArrayBuffer(f)}else fin();
+}
+function edStu(id){const s=id?gS(id):{name:'',grade:5,section:1,phone:''};document.getElementById('mdl').innerHTML=`<div class="mdl" onclick="if(event.target===this)this.remove()"><div class="bg-white rounded-2xl p-6 w-full max-w-md"><h3 style="font-weight:900;font-size:18px;margin-bottom:16px">${id?'تعديل':'إضافة'}</h3><div style="display:flex;flex-direction:column;gap:12px"><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">الاسم *</label><input id="eN" value="${esc(s.name)}" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">الصف</label><select id="eG" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-bold bg-white">${GR.map(g=>`<option ${s.grade===g?'selected':''}>${g}</option>`).join('')}</select></div><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">الشعبة</label><select id="eS" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-bold bg-white">${SC.map(x=>`<option ${s.section===x?'selected':''}>${x}</option>`).join('')}</select></div></div><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">هاتف ولي الأمر</label><input id="eP" value="${esc(s.phone||'')}" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div></div><div style="display:flex;gap:8px;margin-top:16px"><button onclick="svStu('${id||''}')" class="flex-1 bg-p text-white font-bold py-2.5 rounded-xl">حفظ</button>${id?`<button onclick="dlStu('${id}')" class="px-4 bg-red-50 text-red-600 font-bold py-2.5 rounded-xl">حذف</button>`:''}<button onclick="this.closest('.mdl').remove()" class="px-4 bg-slate-100 font-bold py-2.5 rounded-xl">إلغاء</button></div></div></div>`}
+function svStu(id){const n=document.getElementById('eN').value.trim();if(!n){toast('أدخل الاسم','err');return}const d={name:n,grade:+document.getElementById('eG').value,section:+document.getElementById('eS').value,phone:document.getElementById('eP').value.trim()};if(id)Object.assign(gS(id),d);else DB.students.push({id:uid0('S'),...d});save();document.getElementById('mdl').innerHTML='';toast('✓');render()}
+function dlStu(id){if(!confirm('حذف؟'))return;DB.students=DB.students.filter(s=>s.id!==id);DB.records=DB.records.filter(r=>r.studentId!==id);DB.health=DB.health.filter(h=>h.studentId!==id);DB.followups=DB.followups.filter(f=>f.studentId!==id);save();document.getElementById('mdl').innerHTML='';toast('✓');render()}
+
+/* ============ هويتي الصحية ============ */
+let HP='';
+function renderHealth(){
+  const list=DB.health.map(h=>({...h,student:gS(h.studentId)})).filter(h=>h.student);
+  return `<div class="space-y-4"><header style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px"><div><h1 style="font-size:24px;font-weight:900">❤️ هويتي الصحية</h1><p style="font-size:13px;color:#64748b;margin-top:4px">${list.length} حالة</p></div><button onclick="addH()" class="bg-p text-white font-bold px-4 py-2.5 rounded-xl text-sm">+ إضافة</button></header>
+  ${list.length===0?`<div class="bg-white rounded-2xl p-12 text-center shadow-sm"><div style="font-size:48px;margin-bottom:12px">❤️</div><div style="font-weight:900;color:var(--p);font-size:18px">لا حالات مسجلة</div></div>`:`<div class="bg-white rounded-2xl shadow-sm overflow-hidden"><table style="width:100%;font-size:14px"><thead style="background:#f8fafc;border-bottom:1px solid #e2e8f0"><tr style="text-align:right"><th style="padding:12px;font-weight:900;font-size:12px">الطالب</th><th style="padding:12px;font-weight:900;font-size:12px">الصف/الشعبة</th><th style="padding:12px;font-weight:900;font-size:12px">الحالة</th><th style="padding:12px;font-weight:900;font-size:12px">ملاحظات</th><th style="padding:12px;font-weight:900;font-size:12px">إجراءات</th></tr></thead><tbody>${list.map(h=>`<tr style="border-bottom:1px solid #f1f5f9"><td style="padding:12px;font-weight:bold;font-size:12px">${esc(h.student.name)}</td><td style="padding:12px;font-size:12px">${h.student.grade}/${h.student.section}</td><td style="padding:12px;font-size:12px"><span style="background:#ffe4e6;color:#be123c;padding:4px 8px;border-radius:4px;font-weight:bold">${esc(h.condition)}</span></td><td style="padding:12px;font-size:12px">${esc(h.notes||'—')}</td><td style="padding:12px"><button onclick="edH('${h.id}')" style="padding:6px">✏️</button><button onclick="dlH('${h.id}')" style="padding:6px">🗑️</button></td></tr>`).join('')}</tbody></table></div>`}</div>`;
+}
+function addH(){HP='';document.getElementById('mdl').innerHTML=`<div class="mdl" onclick="if(event.target===this)this.remove()"><div class="bg-white rounded-2xl p-6 w-full max-w-md"><h3 style="font-weight:900;font-size:18px;margin-bottom:16px">إضافة حالة صحية</h3><div style="display:flex;flex-direction:column;gap:12px"><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">الطالب *</label><div style="position:relative"><input id="hS" placeholder="اكتب..." oninput="sH()" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"><div id="hD" class="dd hidden"></div></div><div id="hP"></div></div><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">الحالة *</label><input id="hC" placeholder="ربو، سكري..." class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">ملاحظات</label><textarea id="hN" rows="2" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></textarea></div></div><div style="display:flex;gap:8px;margin-top:16px"><button onclick="svH()" class="flex-1 bg-p text-white font-bold py-2.5 rounded-xl">حفظ</button><button onclick="this.closest('.mdl').remove()" class="px-4 bg-slate-100 font-bold py-2.5 rounded-xl">إلغاء</button></div></div></div>`}
+function sH(){const q=document.getElementById('hS').value.trim();const d=document.getElementById('hD');const list=DB.students.filter(s=>!q||s.name.includes(q)).sort((a,b)=>a.name.localeCompare(b.name,'ar')).slice(0,20);if(!list.length){d.innerHTML='<div style="padding:12px;text-align:center;color:#94a3b8;font-size:13px">لا نتائج</div>';d.classList.remove('hidden');return}d.innerHTML=list.map(s=>`<div class="ddi" onclick="pkH('${s.id}')"><div><div style="font-size:14px;font-weight:bold">${esc(s.name)}</div><div style="font-size:12px;color:#64748b">صف ${s.grade} · شعبة ${s.section}</div></div></div>`).join('');d.classList.remove('hidden')}
+function pkH(sid){HP=sid;const s=gS(sid);document.getElementById('hS').value=s.name;document.getElementById('hD').classList.add('hidden');document.getElementById('hD').innerHTML='';document.getElementById('hP').innerHTML=`<div style="padding:8px;background:var(--s);border-radius:8px;font-size:12px;font-weight:bold;margin-top:4px">✓ ${esc(s.name)}</div>`}
+function svH(){if(!HP){toast('اختر','err');return}const c=document.getElementById('hC').value.trim();if(!c){toast('أدخل الحالة','err');return}DB.health.push({id:uid0('H'),studentId:HP,condition:c,notes:document.getElementById('hN').value.trim(),createdAt:Date.now()});HP='';save();document.getElementById('mdl').innerHTML='';toast('✓');render()}
+function edH(id){const h=DB.health.find(x=>x.id===id);if(!h)return;const s=gS(h.studentId);document.getElementById('mdl').innerHTML=`<div class="mdl" onclick="if(event.target===this)this.remove()"><div class="bg-white rounded-2xl p-6 w-full max-w-md"><h3 style="font-weight:900;font-size:18px;margin-bottom:16px">تعديل</h3><div style="padding:8px;background:#f8fafc;border-radius:8px;font-size:14px;font-weight:bold;margin-bottom:12px">${esc(s.name)} — ${s.grade}/${s.section}</div><div style="display:flex;flex-direction:column;gap:12px"><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">الحالة</label><input id="hCE" value="${esc(h.condition)}" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">ملاحظات</label><textarea id="hNE" rows="2" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm">${esc(h.notes||'')}</textarea></div></div><div style="display:flex;gap:8px;margin-top:16px"><button onclick="upH('${id}')" class="flex-1 bg-p text-white font-bold py-2.5 rounded-xl">حفظ</button><button onclick="dlH('${id}')" class="px-4 bg-red-50 text-red-600 font-bold py-2.5 rounded-xl">حذف</button><button onclick="this.closest('.mdl').remove()" class="px-4 bg-slate-100 font-bold py-2.5 rounded-xl">إلغاء</button></div></div></div>`}
+function upH(id){const h=DB.health.find(x=>x.id===id);h.condition=document.getElementById('hCE').value.trim();h.notes=document.getElementById('hNE').value.trim();save();document.getElementById('mdl').innerHTML='';toast('✓');render()}
+function dlH(id){if(!confirm('حذف؟'))return;DB.health=DB.health.filter(x=>x.id!==id);save();document.getElementById('mdl').innerHTML='';toast('✓');render()}
+
+/* ============ التحويل الصحي ============ */
+let HT='';
+function renderHealthTransfer(){
+  return `<div class="max-w-4xl space-y-5"><header><h1 style="font-size:24px;font-weight:900">التحويل للوحدة الصحية</h1><p style="font-size:13px;color:#64748b;margin-top:4px">📅 ${today()}</p></header><div class="bg-white rounded-2xl p-6 shadow-sm space-y-4">
+  <div><label style="display:block;font-size:14px;font-weight:bold;margin-bottom:8px">اختيار الطالب</label><div class="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2"><div style="position:relative"><input id="htS" placeholder="اكتب..." oninput="sHt()" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm"><div id="htD" class="dd hidden"></div></div><select id="htG" onchange="sHt()" class="rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm font-bold bg-white"><option value="">كل الصفوف</option>${GR.map(g=>`<option>${g}</option>`).join('')}</select><select id="htSc" onchange="sHt()" class="rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm font-bold bg-white"><option value="">كل الشعب</option>${SC.map(s=>`<option>${s}</option>`).join('')}</select></div><div id="htP"></div></div>
+  <div><label style="display:block;font-size:14px;font-weight:bold;margin-bottom:8px">سبب التحويل</label><textarea id="htR" rows="2" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm" placeholder="اختياري..."></textarea></div>
+  <div><label style="display:block;font-size:14px;font-weight:bold;margin-bottom:8px">المُسجل *</label><select id="htU" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm font-bold bg-white">${DB.users.map(u=>`<option value="${u.id}">${esc(u.name)} — ${esc(u.title)}</option>`).join('')}</select></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><button onclick="pHT()" class="flex-1 bg-p text-white font-black py-3.5 rounded-xl">🖨️ طباعة</button><button onclick="waHT()" class="flex-1 bg-emerald-600 text-white font-black py-3.5 rounded-xl">💬 واتساب (نص)</button><button onclick="waHTPDF()" class="flex-1 bg-blue-600 text-white font-black py-3.5 rounded-xl">📄 واتساب (PDF)</button></div></div></div>`;
+}
+function sHt(){const q=document.getElementById('htS').value.trim(),g=document.getElementById('htG').value,s=document.getElementById('htSc').value,d=document.getElementById('htD');const list=DB.students.filter(x=>{if(g&&x.grade!==+g)return false;if(s&&x.section!==+s)return false;if(q&&!x.name.includes(q))return false;return true}).sort((a,b)=>a.name.localeCompare(b.name,'ar')).slice(0,25);if(!list.length){d.innerHTML='<div style="padding:12px;text-align:center;color:#94a3b8;font-size:13px">لا نتائج</div>';d.classList.remove('hidden');return}d.innerHTML=list.map(x=>`<div class="ddi" onclick="pkHt('${x.id}')"><div><div style="font-size:14px;font-weight:bold">${esc(x.name)}</div><div style="font-size:12px;color:#64748b">صف ${x.grade} · شعبة ${x.section}</div></div></div>`).join('');d.classList.remove('hidden')}
+function pkHt(sid){HT=sid;const s=gS(sid);document.getElementById('htS').value=s.name;document.getElementById('htD').classList.add('hidden');document.getElementById('htD').innerHTML='';document.getElementById('htP').innerHTML=`<div style="padding:8px;background:var(--s);border-radius:8px;font-size:12px;font-weight:bold;margin-top:4px">✓ ${esc(s.name)} — صف ${s.grade}/${s.section}</div>`}
+function pHT(){if(!HT){toast('اختر','err');return}const r=document.getElementById('htR').value.trim();DB.referrals.push({id:uid0('HR'),studentId:HT,reason:r,createdAt:Date.now()});save();prt(healthHTML(HT,r))}
+function waHT(){if(!HT){toast('اختر','err');return}const s=gS(HT);if(!s.phone){toast('لا رقم','err');return}wa(s.phone,fill(DB.config.waHealth,{student:s.name,grade:s.grade,section:s.section,reason:document.getElementById('htR').value.trim()?' للسبب التالي: '+document.getElementById('htR').value.trim():'',date:fmtDT(Date.now()),school:DB.config.schoolName}))}
+function waHTPDF(){if(!HT){toast('اختر','err');return}const s=gS(HT);if(!s.phone){toast('لا رقم','err');return}const r=document.getElementById('htR').value.trim();const fn=`تحويل_${s.name.replace(/\s+/g,'_')}.pdf`;pdf(healthHTML(HT,r),fn,s.phone,fill(DB.config.waHealth,{student:s.name,grade:s.grade,section:s.section,reason:r?' للسبب التالي: '+r:'',date:fmtDT(Date.now()),school:DB.config.schoolName}))}
+
+/* ============ تقرير الوحدة ============ */
+function renderHealthReport(){
+  const list=DB.referrals.map(h=>({...h,student:gS(h.studentId)})).filter(h=>h.student);
+  const byG={};GR.forEach(g=>byG[g]=0);list.forEach(h=>{if(h.student)byG[h.student.grade]++});
+  const mx=Math.max(...Object.values(byG),1);
+  return `<div class="space-y-4"><header style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px"><div><h1 style="font-size:24px;font-weight:900">📊 تقرير الوحدة الصحية</h1><p style="font-size:13px;color:#64748b;margin-top:4px">${list.length} تحويل · 📅 ${today()}</p></div><button onclick="pHR()" class="bg-white border-2 border-slate-200 font-bold px-4 py-2.5 rounded-xl text-sm">🖨️ طباعة</button></header>
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-3">${st('إجمالي',list.length,'🌙','#dc2626,#991b1b')}${GR.slice(0,4).map(g=>st('الصف '+g,byG[g],'📚','#6366f1,#3730a3')).join('')}</div>
+  <div class="bg-white rounded-2xl p-5 shadow-sm"><h3 style="font-weight:900;margin-bottom:16px">📊 التوزيع حسب الصفوف</h3><div style="display:flex;flex-direction:column;gap:12px">${GR.map(g=>`<div style="display:flex;align-items:center;gap:12px"><div style="width:64px;font-size:14px;font-weight:bold">الصف ${g}</div><div style="flex:1;height:20px;background:#f1f5f9;border-radius:8px;overflow:hidden"><div class="bg-p" style="height:100%;width:${(byG[g]/mx)*100}%"></div></div><div style="width:40px;text-align:left;font-size:12px;font-weight:bold">${byG[g]}</div></div>`).join('')}</div></div>
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden"><table style="width:100%;font-size:14px"><thead style="background:#f8fafc;border-bottom:1px solid #e2e8f0"><tr style="text-align:right"><th style="padding:12px;font-weight:900;font-size:12px">التاريخ</th><th style="padding:12px;font-weight:900;font-size:12px">الطالب</th><th style="padding:12px;font-weight:900;font-size:12px">الصف/الشعبة</th><th style="padding:12px;font-weight:900;font-size:12px">السبب</th></tr></thead><tbody>${list.map(h=>`<tr style="border-bottom:1px solid #f1f5f9"><td style="padding:12px;font-size:12px">${fmtD(h.createdAt)}</td><td style="padding:12px;font-weight:bold;font-size:12px">${esc(h.student.name)}</td><td style="padding:12px;font-size:12px">${h.student.grade}/${h.student.section}</td><td style="padding:12px;font-size:12px">${esc(h.reason||'—')}</td></tr>`).join('')}${list.length===0?'<tr><td colspan="4" style="text-align:center;padding:48px;color:#94a3b8">لا تحويلات</td></tr>':''}</tbody></table></div></div>`;
+}
+function pHR(){const list=DB.referrals.map(h=>({...h,student:gS(h.studentId)})).filter(h=>h.student);const rows=list.map(h=>`<tr><td style="border:1px solid #999;padding:6px;font-size:11px">${fmtD(h.createdAt)}</td><td style="border:1px solid #999;padding:6px;font-size:11px">${esc(h.student.name)}</td><td style="border:1px solid #999;padding:6px;font-size:11px;text-align:center">${h.student.grade}/${h.student.section}</td><td style="border:1px solid #999;padding:6px;font-size:11px">${esc(h.reason||'—')}</td></tr>`).join('');prt(`<div style="max-width:900px;margin:auto">${rHdr()}<div style="text-align:center;font-weight:900;font-size:14px;margin-bottom:12px">تقرير تحويلات الوحدة الصحية (${list.length})</div><table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr style="background:var(--c-primary);color:white"><th style="border:1px solid #999;padding:7px">التاريخ</th><th style="border:1px solid #999;padding:7px">الطالب</th><th style="border:1px solid #999;padding:7px">الصف/الشعبة</th><th style="border:1px solid #999;padding:7px">السبب</th></tr></thead><tbody>${rows}</tbody></table>${rFtr()}</div>`)}
+
+/* ============ المستخدمون ============ */
+function renderUsers(){return `<div class="space-y-4"><header style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px"><div><h1 style="font-size:24px;font-weight:900">👤 إدارة المستخدمين</h1><p style="font-size:13px;color:#64748b;margin-top:4px">${DB.users.length} مستخدم</p></div><button onclick="edU('')" class="bg-p text-white font-bold px-4 py-2.5 rounded-xl text-sm">+ إضافة</button></header>
+  <div class="bg-blue-50 border-r-4 border-blue-500 p-4 rounded-xl text-sm"><b>💡 ملاحظة:</b> المستخدم بكلمة مرور فارغة يمكنه الدخول بكتابة اسم المستخدم فقط.</div>
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden"><table style="width:100%;font-size:14px"><thead style="background:#f8fafc;border-bottom:1px solid #e2e8f0"><tr style="text-align:right"><th style="padding:12px;font-weight:900;font-size:12px">الاسم</th><th style="padding:12px;font-weight:900;font-size:12px">المسمى</th><th style="padding:12px;font-weight:900;font-size:12px">المستخدم</th><th style="padding:12px;font-weight:900;font-size:12px">كلمة المرور</th><th style="padding:12px;font-weight:900;font-size:12px">الصلاحية</th><th style="padding:12px;font-weight:900;font-size:12px">إجراءات</th></tr></thead><tbody>${DB.users.map(u=>`<tr style="border-bottom:1px solid #f1f5f9"><td style="padding:12px;font-weight:bold;font-size:12px">${esc(u.name)}</td><td style="padding:12px;font-size:12px"><span style="background:var(--s);color:var(--p);padding:4px 8px;border-radius:4px;font-weight:bold">${esc(u.title)}</span></td><td style="padding:12px;font-size:12px;font-family:monospace">${esc(u.username||'—')}</td><td style="padding:12px;font-size:12px">${u.password?'<span style="color:#dc2626">🔒 محمية</span>':'<span style="color:#059669">✓ بدون</span>'}</td><td style="padding:12px;font-size:12px">${u.isAdmin?'<span style="background:#fef3c7;color:#92400e;padding:4px 8px;border-radius:4px;font-weight:bold">👑 مدير</span>':'مستخدم'}</td><td style="padding:12px"><button onclick="edU('${u.id}')" style="padding:6px">✏️</button></td></tr>`).join('')}</tbody></table></div></div>`}
+function edU(id){const u=id?gU(id):{name:'',title:'معلم',username:'',password:'',isAdmin:false};document.getElementById('mdl').innerHTML=`<div class="mdl" onclick="if(event.target===this)this.remove()"><div class="bg-white rounded-2xl p-6 w-full max-w-md"><h3 style="font-weight:900;font-size:18px;margin-bottom:16px">${id?'تعديل':'إضافة'}</h3><div style="display:flex;flex-direction:column;gap:12px"><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">الاسم *</label><input id="uN" value="${esc(u.name)}" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">المسمى *</label><input id="uT" value="${esc(u.title)}" list="titlesList" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"><datalist id="titlesList"><option value="معلم"><option value="مربي صف"><option value="أخصائي اجتماعي"><option value="وكيل"><option value="مدير"><option value="زائر صحي"></datalist></div><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">اسم المستخدم *</label><input id="uU" value="${esc(u.username||'')}" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-mono" placeholder="مثال: ahmed"></div><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">كلمة المرور <span class="text-slate-400">(اتركها فارغة للدخول بدون كلمة مرور)</span></label><input id="uP" value="${esc(u.password||'')}" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-mono" placeholder="اتركها فارغة"></div><div><label style="display:flex;gap:8px;font-size:14px;background:#fffbeb;padding:12px;border-radius:12px"><input type="checkbox" id="uA" ${u.isAdmin?'checked':''}><span style="font-weight:bold">👑 صلاحيات مدير</span></label></div></div><div style="display:flex;gap:8px;margin-top:16px"><button onclick="svU('${id||''}')" class="flex-1 bg-p text-white font-bold py-2.5 rounded-xl">حفظ</button>${id?`<button onclick="dlU('${id}')" class="px-4 bg-red-50 text-red-600 font-bold py-2.5 rounded-xl">حذف</button>`:''}<button onclick="this.closest('.mdl').remove()" class="px-4 bg-slate-100 font-bold py-2.5 rounded-xl">إلغاء</button></div></div></div>`}
+function svU(id){const n=document.getElementById('uN').value.trim();const t=document.getElementById('uT').value.trim();const un=document.getElementById('uU').value.trim();const p=document.getElementById('uP').value;const a=document.getElementById('uA').checked;if(!n||!t){toast('أكمل الاسم والمسمى','err');return}if(!un){toast('أدخل اسم المستخدم','err');return}if(DB.users.some(u=>u.username===un&&u.id!==id)){toast('اسم المستخدم محجوز','err');return}if(id){const u=gU(id);Object.assign(u,{name:n,title:t,username:un,password:p,isAdmin:a});if(u.id===USER.id)USER=u}else DB.users.push({id:uid0('U'),name:n,title:t,username:un,password:p,isAdmin:a});save();document.getElementById('mdl').innerHTML='';toast('✓');render()}
+function dlU(id){const u=gU(id);if(u.isAdmin&&DB.users.filter(x=>x.isAdmin).length===1){toast('يجب وجود مدير','err');return}if(!confirm('حذف؟'))return;DB.users=DB.users.filter(x=>x.id!==id);save();document.getElementById('mdl').innerHTML='';render()}
+
+/* ============ السلوكيات ============ */
+function renderBehaviors(){
+  const cats=[...new Set(DB.behaviors.map(b=>b.cat||'أخرى'))];
+  return `<div class="space-y-4"><header style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px"><div><h1 style="font-size:24px;font-weight:900">⚠️ إدارة السلوكيات والمخالفات</h1><p style="font-size:13px;color:#64748b;margin-top:4px">${DB.behaviors.filter(b=>b.active).length} نشطة / ${DB.behaviors.length}</p></div><button onclick="edB('')" class="bg-p text-white font-bold px-4 py-2.5 rounded-xl text-sm">+ إضافة</button></header>
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div style="overflow-x:auto"><table style="width:100%;font-size:14px">
+      <thead style="background:#f8fafc;border-bottom:1px solid #e2e8f0"><tr style="text-align:right"><th style="padding:12px;font-weight:900;font-size:12px">التصنيف</th><th style="padding:12px;font-weight:900;font-size:12px">البند</th><th style="padding:12px;font-weight:900;font-size:12px">المستوى</th><th style="padding:12px;font-weight:900;font-size:12px">التدرج المتوقع (تكرار)</th><th style="padding:12px;font-weight:900;font-size:12px">النقاط</th><th style="padding:12px;font-weight:900;font-size:12px">الحالة</th><th style="padding:12px;font-weight:900;font-size:12px">إجراءات</th></tr></thead>
+      <tbody>${cats.map(cat=>DB.behaviors.filter(b=>b.cat===cat).map(b=>{
+        let escStr = `<span style="background:#ecfdf5;color:#047857;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:bold">م${b.level}</span> ➔ <span style="background:#fef3c7;color:#d97706;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:bold">م${b.level+1}</span> ➔ <span style="background:#fee2e2;color:#dc2626;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:bold">م${b.level+2}</span>`;
+        if(b.id==='B_T') escStr = `<span style="font-size:10px;color:#dc2626;font-weight:bold;line-height:1.5;display:block">1:نصح شفهي ➔ 2:نصح ورقي ➔ 3:تنبيه ➔ 4:إنذار ➔ 5:دراسة حالة (يعادل غياب)</span>`;
+        if(b.cat==='غياب') escStr = `<span style="font-size:10px;color:#dc2626;font-weight:bold">حسب أيام الغياب</span>`;
+        return `<tr style="border-bottom:1px solid #f1f5f9">
+          <td style="padding:12px;font-size:11px;font-weight:bold;color:var(--p)">${cat}</td>
+          <td style="padding:12px;font-weight:bold;font-size:12px">${esc(b.name)}</td>
+          <td style="padding:12px;font-size:12px">${b.level}</td>
+          <td style="padding:12px;font-size:12px">${escStr}</td>
+          <td style="padding:12px;font-size:12px"><span style="background:#fef2f2;color:#dc2626;padding:4px 8px;border-radius:4px;font-weight:bold">${b.points}</span></td>
+          <td style="padding:12px"><button onclick="tgB('${b.id}')" style="font-size:11px;font-weight:bold;padding:4px 8px;border-radius:4px;${b.active?'background:var(--s);color:var(--p)':'background:#f1f5f9;color:#64748b'}">${b.active?'✓ نشط':'معطل'}</button></td>
+          <td style="padding:12px"><button onclick="edB('${b.id}')" style="padding:6px">✏️</button><button onclick="dlB('${b.id}')" style="padding:6px">🗑️</button></td>
+        </tr>`}).join('')).join('')}</tbody>
+    </table></div>
+  </div></div>`;
+}
+function edB(id){
+  const b=id?gB(id):{name:'',points:1,cat:'الانضباط السلوكي',defActId:'A1',level:1};
+  const cats=[...new Set([...DB.behaviors.map(x=>x.cat||'أخرى'),'تأخر دراسي','غياب','الانضباط السلوكي','أخرى'])];
+  document.getElementById('mdl').innerHTML=`<div class="mdl" onclick="if(event.target===this)this.remove()"><div class="bg-white rounded-2xl p-6 w-full max-w-md">
+    <h3 style="font-weight:900;font-size:18px;margin-bottom:16px">${id?'تعديل':'إضافة'}</h3>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">التصنيف</label>
+        <input id="bC" value="${esc(b.cat||'')}" list="catsList" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm">
+        <datalist id="catsList">${cats.map(c=>`<option value="${c}">`).join('')}</datalist>
+      </div>
+      <div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">الاسم *</label><input id="bN" value="${esc(b.name)}" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div>
+      <div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">المستوى (1-7) *</label><input id="bL" type="number" min="1" max="7" value="${b.level||1}" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div>
+      <div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">النقاط *</label><input id="bP" type="number" min="1" max="20" value="${b.points}" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px"><button onclick="svB('${id||''}')" class="flex-1 bg-p text-white font-bold py-2.5 rounded-xl">حفظ</button>${id?`<button onclick="dlB('${id}')" class="px-4 bg-red-50 text-red-600 font-bold py-2.5 rounded-xl">حذف</button>`:''}<button onclick="this.closest('.mdl').remove()" class="px-4 bg-slate-100 font-bold py-2.5 rounded-xl">إلغاء</button></div>
+  </div></div>`;
+}
+function svB(id){
+  const n=document.getElementById('bN').value.trim(), p=+document.getElementById('bP').value;
+  const c=document.getElementById('bC').value.trim()||'أخرى';
+  const lvl=+document.getElementById('bL').value;
+  if(!n||!p){toast('أكمل الحقول','err');return}
+  if(id){const b=gB(id);Object.assign(b,{name:n,points:p,cat:c,level:lvl})}
+  else DB.behaviors.push({id:uid0('B'),name:n,points:p,cat:c,level:lvl,active:true});
+  save();document.getElementById('mdl').innerHTML='';toast('✓');render();
+}
+function tgB(id){const b=gB(id);b.active=!b.active;save();render()}
+function dlB(id){if(!confirm('حذف؟'))return;DB.behaviors=DB.behaviors.filter(b=>b.id!==id);save();render()}
+
+/* ============ الإجراءات ============ */
+function renderActions(){
+  return `<div class="space-y-4"><header style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px"><div><h1 style="font-size:24px;font-weight:900">🎯 إدارة الإجراءات</h1><p style="font-size:13px;color:#64748b;margin-top:4px">${DB.actions.length} إجراء</p></div><button onclick="edA('')" class="bg-p text-white font-bold px-4 py-2.5 rounded-xl text-sm">+ إضافة</button></header>
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden"><table style="width:100%;font-size:14px"><thead style="background:#f8fafc;border-bottom:1px solid #e2e8f0"><tr style="text-align:right"><th style="padding:12px;font-weight:900;font-size:12px">الإجراء</th><th style="padding:12px;font-weight:900;font-size:12px">المستوى</th><th style="padding:12px;font-weight:900;font-size:12px">النص اللائحي</th><th style="padding:12px;font-weight:900;font-size:12px">إجراءات</th></tr></thead><tbody>${DB.actions.map(a=>`<tr style="border-bottom:1px solid #f1f5f9"><td style="padding:12px;font-weight:bold;font-size:12px">${esc(a.name)}</td><td style="padding:12px;font-size:12px">${a.level||1}</td><td style="padding:12px;font-size:11px;color:#64748b;max-width:300px;line-height:1.5">${esc(a.desc||'—')}</td><td style="padding:12px"><button onclick="edA('${a.id}')" style="padding:6px">✏️</button><button onclick="dlA('${a.id}')" style="padding:6px">🗑️</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+function edA(id){const a=id?gA(id):{name:'',desc:'',level:1};document.getElementById('mdl').innerHTML=`<div class="mdl" onclick="if(event.target===this)this.remove()"><div class="bg-white rounded-2xl p-6 w-full max-w-md"><h3 style="font-weight:900;font-size:18px;margin-bottom:16px">${id?'تعديل':'إضافة'}</h3><div style="display:flex;flex-direction:column;gap:12px"><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">الاسم *</label><input id="aN" value="${esc(a.name)}" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">المستوى (1-7) *</label><input id="aL" type="number" min="1" max="7" value="${a.level||1}" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">النص اللائحي (القرار)</label><textarea id="aD" rows="4" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm">${esc(a.desc||'')}</textarea></div></div><div style="display:flex;gap:8px;margin-top:16px"><button onclick="svA('${id||''}')" class="flex-1 bg-p text-white font-bold py-2.5 rounded-xl">حفظ</button>${id?`<button onclick="dlA('${id}')" class="px-4 bg-red-50 text-red-600 font-bold py-2.5 rounded-xl">حذف</button>`:''}<button onclick="this.closest('.mdl').remove()" class="px-4 bg-slate-100 font-bold py-2.5 rounded-xl">إلغاء</button></div></div></div>`}
+function svA(id){const n=document.getElementById('aN').value.trim();const d=document.getElementById('aD').value.trim();const lvl=+document.getElementById('aL').value;if(!n){toast('أدخل الاسم','err');return}if(id){const a=gA(id);a.name=n;a.desc=d;a.level=lvl}else DB.actions.push({id:uid0('A'),name:n,desc:d,level:lvl});save();document.getElementById('mdl').innerHTML='';toast('✓');render()}
+function dlA(id){if(!confirm('حذف؟'))return;DB.actions=DB.actions.filter(a=>a.id!==id);save();render()}
+
+/* ============ التقارير ============ */
+function renderReports(){return `<div class="space-y-5"><header><h1 style="font-size:24px;font-weight:900">📄 التقارير الرسمية</h1><p style="font-size:13px;color:#64748b;margin-top:4px">📅 ${today()}</p></header><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">${rc('rptStu()','👤','تقرير طالب','سجل كامل')}${rc('rptGrade()','🏫','تقرير صف','كشف الطلبة')}${rc('pRecs()','📋','كشف المخالفات','حسب الفلاتر')}${rc('cardsStu()','📇','كشف طلبة','أسماء وأرقام')}${rc('go(\'hreport\')','📊','تقرير الوحدة الصحية','إحصائية')}</div></div>`}
+function rc(a,i,t,d){return `<button onclick="${a}" class="card bg-white rounded-2xl p-5 shadow-sm text-right"><div class="ic w-12 h-12 bg-ps text-p text-2xl mb-2">${i}</div><div style="font-weight:900">${t}</div><div style="font-size:12px;color:#64748b;margin-top:4px">${d}</div></button>`}
+let RP='';
+function rptStu(){RP='';document.getElementById('mdl').innerHTML=`<div class="mdl" onclick="if(event.target===this)this.remove()"><div class="bg-white rounded-2xl p-6 w-full max-w-md"><h3 style="font-weight:900;font-size:18px;margin-bottom:16px">تقرير طالب</h3><div style="position:relative;margin-bottom:12px"><input id="rS" placeholder="ابحث..." oninput="sRS()" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"><div id="rD" class="dd hidden"></div></div><div id="rP"></div><div style="display:flex;gap:8px;margin-top:16px"><button onclick="pRS()" class="flex-1 bg-p text-white font-bold py-2.5 rounded-xl">🖨️ طباعة</button><button onclick="waRS()" class="flex-1 bg-emerald-600 text-white font-bold py-2.5 rounded-xl">💬 واتساب</button><button onclick="this.closest('.mdl').remove()" class="px-3 bg-slate-100 font-bold py-2.5 rounded-xl">إلغاء</button></div></div></div>`}
+function sRS(){const q=document.getElementById('rS').value.trim();const d=document.getElementById('rD');const list=DB.students.filter(s=>!q||s.name.includes(q)).sort((a,b)=>a.name.localeCompare(b.name,'ar')).slice(0,20);if(!list.length){d.innerHTML='<div style="padding:12px;text-align:center;color:#94a3b8;font-size:13px">لا نتائج</div>';d.classList.remove('hidden');return}d.innerHTML=list.map(s=>`<div class="ddi" onclick="pkRS('${s.id}')"><div><div style="font-size:14px;font-weight:bold">${esc(s.name)}</div><div style="font-size:12px;color:#64748b">صف ${s.grade} · شعبة ${s.section}</div></div></div>`).join('');d.classList.remove('hidden')}
+function pkRS(sid){RP=sid;const s=gS(sid);document.getElementById('rS').value=s.name;document.getElementById('rD').classList.add('hidden');document.getElementById('rD').innerHTML='';document.getElementById('rP').innerHTML=`<div style="padding:8px;background:var(--s);border-radius:8px;font-size:12px;font-weight:bold">✓ ${esc(s.name)}</div>`}
+function stuReportHTML(sid){const s=gS(sid);const recs=DB.records.filter(r=>r.studentId===sid).sort((a,b)=>b.createdAt-a.createdAt);const tp=recs.reduce((a,r)=>a+(r.points||0),0);const rows=recs.map(r=>`<tr><td style="border:1px solid #999;padding:5px;font-size:10px">${fmtD(r.createdAt)}</td><td style="border:1px solid #999;padding:5px;font-size:10px">${esc(r.behaviorName||'')}</td><td style="border:1px solid #999;padding:5px;font-size:10px;text-align:center;color:#DC2626;font-weight:bold">${r.points||0}</td><td style="border:1px solid #999;padding:5px;font-size:10px">${esc(r.actionName||'')}</td></tr>`).join('');return `<div style="max-width:900px;margin:auto">${rHdr()}<div style="text-align:center;font-size:15px;font-weight:900;margin-bottom:12px;background:var(--c-primary-soft);padding:8px;border-radius:6px">تقرير السلوك الشامل</div><table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px"><tr><td style="border:1px solid #999;padding:7px;background:#f5f5f5;font-weight:bold;width:20%">الطالب</td><td style="border:1px solid #999;padding:7px">${esc(s.name)}</td><td style="border:1px solid #999;padding:7px;background:#f5f5f5;font-weight:bold;width:15%">الصف</td><td style="border:1px solid #999;padding:7px">${s.grade}/${s.section}</td></tr><tr><td style="border:1px solid #999;padding:7px;background:#f5f5f5;font-weight:bold">المخالفات</td><td style="border:1px solid #999;padding:7px;font-weight:bold;color:#DC2626">${recs.length}</td><td style="border:1px solid #999;padding:7px;background:#f5f5f5;font-weight:bold">النقاط</td><td style="border:1px solid #999;padding:7px;font-weight:bold;color:#DC2626">${tp}</td></tr></table><table style="width:100%;border-collapse:collapse;font-size:10px"><thead><tr style="background:var(--c-primary);color:white"><th style="border:1px solid #999;padding:6px">التاريخ</th><th style="border:1px solid #999;padding:6px">المخالفة</th><th style="border:1px solid #999;padding:6px">النقاط</th><th style="border:1px solid #999;padding:6px">الإجراء</th></tr></thead><tbody>${rows||'<tr><td colspan="4" style="border:1px solid #999;padding:15px;text-align:center">لا مخالفات</td></tr>'}</tbody></table>${rFtr()}</div>`}
+function pRS(){if(!RP){toast('اختر','err');return}document.getElementById('mdl').innerHTML='';prt(stuReportHTML(RP))}
+function waRS(){if(!RP){toast('اختر','err');return}const s=gS(RP);if(!s.phone){toast('لا رقم','err');return}const recs=DB.records.filter(r=>r.studentId===RP);const tp=recs.reduce((a,r)=>a+(r.points||0),0);let msg=`السلام عليكم ورحمة الله وبركاته\nولي أمر الطالب: ${s.name}\nالصف: ${s.grade} / الشعبة: ${s.section}\n\n📋 تقرير السلوك:\nإجمالي المخالفات: ${recs.length}\nإجمالي النقاط: ${tp}\n\n${DB.config.schoolName}`;wa(s.phone,msg)}
+function rptGrade(){document.getElementById('mdl').innerHTML=`<div class="mdl" onclick="if(event.target===this)this.remove()"><div class="bg-white rounded-2xl p-6 w-full max-w-md"><h3 style="font-weight:900;font-size:18px;margin-bottom:16px">تقرير صف</h3><div style="display:flex;flex-direction:column;gap:12px"><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">الصف</label><select id="gG" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-bold bg-white">${GR.map(g=>`<option>${g}</option>`).join('')}</select></div><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">الشعبة</label><select id="gS2" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-bold bg-white"><option value="">كل الشعب</option>${SC.map(s=>`<option>${s}</option>`).join('')}</select></div></div><div style="display:flex;gap:8px;margin-top:16px"><button onclick="doGR()" class="flex-1 bg-p text-white font-bold py-2.5 rounded-xl">🖨️ طباعة</button><button onclick="this.closest('.mdl').remove()" class="px-4 bg-slate-100 font-bold py-2.5 rounded-xl">إلغاء</button></div></div></div>`}
+function doGR(){const g=+document.getElementById('gG').value;const s=document.getElementById('gS2').value;const stus=DB.students.filter(x=>x.grade===g&&(!s||x.section===+s)).sort((a,b)=>a.section-b.section||a.name.localeCompare(b.name,'ar'));const rows=stus.map((x,i)=>{const st=stats(x.id);return `<tr><td style="border:1px solid #999;padding:5px;text-align:center;font-size:10px">${i+1}</td><td style="border:1px solid #999;padding:5px;font-size:10px">${esc(x.name)}</td><td style="border:1px solid #999;padding:5px;text-align:center;font-size:10px">${x.section}</td><td style="border:1px solid #999;padding:5px;text-align:center;font-size:10px;color:#DC2626;font-weight:bold">${st.count}</td><td style="border:1px solid #999;padding:5px;text-align:center;font-size:10px;color:#DC2626;font-weight:bold">${st.points}</td></tr>`}).join('');document.getElementById('mdl').innerHTML='';prt(`<div style="max-width:900px;margin:auto">${rHdr()}<div style="text-align:center;font-size:14px;font-weight:900;margin-bottom:12px;background:var(--c-primary-soft);padding:8px;border-radius:6px">كشف السلوك — الصف ${g} ${s?'شعبة '+s:''}</div><table style="width:100%;border-collapse:collapse;font-size:10px"><thead><tr style="background:var(--c-primary);color:white"><th style="border:1px solid #999;padding:6px">#</th><th style="border:1px solid #999;padding:6px">الاسم</th><th style="border:1px solid #999;padding:6px">الشعبة</th><th style="border:1px solid #999;padding:6px">المخالفات</th><th style="border:1px solid #999;padding:6px">النقاط</th></tr></thead><tbody>${rows}</tbody></table>${rFtr()}</div>`)}
+function cardsStu(){document.getElementById('mdl').innerHTML=`<div class="mdl" onclick="if(event.target===this)this.remove()"><div class="bg-white rounded-2xl p-6 w-full max-w-md"><h3 style="font-weight:900;font-size:18px;margin-bottom:16px">كشف طلبة</h3><div style="display:flex;flex-direction:column;gap:12px"><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">الصف</label><select id="cG" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-bold bg-white">${GR.map(g=>`<option>${g}</option>`).join('')}</select></div><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">الشعبة</label><select id="cS" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-bold bg-white"><option value="">كل الشعب</option>${SC.map(s=>`<option>${s}</option>`).join('')}</select></div></div><div style="display:flex;gap:8px;margin-top:16px"><button onclick="doCards()" class="flex-1 bg-p text-white font-bold py-2.5 rounded-xl">🖨️ طباعة</button><button onclick="this.closest('.mdl').remove()" class="px-4 bg-slate-100 font-bold py-2.5 rounded-xl">إلغاء</button></div></div></div>`}
+function doCards(){const g=+document.getElementById('cG').value;const s=document.getElementById('cS').value;const stus=DB.students.filter(x=>x.grade===g&&(!s||x.section===+s)).sort((a,b)=>a.section-b.section||a.name.localeCompare(b.name,'ar'));const rows=stus.map((x,i)=>`<tr><td style="border:1px solid #999;padding:5px;text-align:center;font-size:10px">${i+1}</td><td style="border:1px solid #999;padding:5px;font-size:10px">${esc(x.name)}</td><td style="border:1px solid #999;padding:5px;text-align:center;font-size:10px">${x.section}</td><td style="border:1px solid #999;padding:5px;text-align:center;font-size:10px">${x.phone?esc(x.phone):'—'}</td></tr>`).join('');document.getElementById('mdl').innerHTML='';prt(`<div style="max-width:900px;margin:auto">${rHdr()}<div style="text-align:center;font-weight:900;font-size:14px;margin-bottom:12px">كشف طلبة الصف ${g} ${s?'شعبة '+s:''} (${stus.length})</div><table style="width:100%;border-collapse:collapse;font-size:10px"><thead><tr style="background:var(--c-primary);color:white"><th style="border:1px solid #999;padding:6px;width:40px">#</th><th style="border:1px solid #999;padding:6px">الاسم</th><th style="border:1px solid #999;padding:6px;width:70px">الشعبة</th><th style="border:1px solid #999;padding:6px;width:110px">هاتف ولي الأمر</th></tr></thead><tbody>${rows}</tbody></table>${rFtr()}</div>`)}
+
+/* ============ التنبيهات ============ */
+function renderAlerts(){
+  const al=alerts(),fu=follow();
+  return `<div class="space-y-5"><header><h1 style="font-size:24px;font-weight:900">🔔 التنبيهات والمتابعة</h1><p style="font-size:13px;color:#64748b;margin-top:4px">${al.length} تنبيه · ${fu.length} متابعة</p></header>
+  <div><h2 style="font-weight:900;padding-right:12px;border-right:4px solid #f59e0b;margin-bottom:12px;color:#92400e">⏰ متابعات أولياء الأمور (${fu.length})</h2>
+  ${fu.length===0?`<div class="bg-white rounded-2xl p-8 text-center shadow-sm"><div style="font-size:32px">✅</div><div style="font-weight:bold;color:var(--p);margin-top:8px">لا متابعات معلقة</div></div>`:`<div style="display:flex;flex-direction:column;gap:12px">${fu.map(f=>{const s=f.s,r=f.r;return `<div class="bg-white rounded-2xl p-4 shadow-sm" style="border-right:4px solid #f59e0b"><div style="display:flex;gap:12px;align-items:start;flex-wrap:wrap"><div style="width:44px;height:44px;border-radius:12px;background:#fef3c7;display:flex;align-items:center;justify-content:center;font-size:24px">⏰</div><div style="flex:1;min-width:200px"><div style="font-weight:900;font-size:14px">${esc(s.name)}</div><div style="font-size:12px;color:#64748b;margin-top:4px">صف ${s.grade} / شعبة ${s.section}</div><div style="font-size:12px;color:#64748b;margin-top:4px">📋 ${esc(r?.behaviorName||'')} → ${esc(r?.actionName||'')}</div><div style="font-size:10px;color:#92400e;font-weight:bold;margin-top:4px">منذ ${f.d} يوم</div></div></div><div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button onclick="fuU('${f.id}','yes')" class="flex-1 bg-emerald-600 text-white font-bold py-2 rounded-lg text-xs">✓ حضر</button><button onclick="fuU('${f.id}','no')" class="flex-1 bg-red-600 text-white font-bold py-2 rounded-lg text-xs">✗ لم يحضر</button><button onclick="fuU('${f.id}','note')" class="flex-1 bg-slate-600 text-white font-bold py-2 rounded-lg text-xs">📝 ملاحظة</button></div></div>`}).join('')}</div>`}</div>
+  <div><h2 style="font-weight:900;padding-right:12px;border-right:4px solid #dc2626;margin-bottom:12px;color:#991b1b">🚨 تكرار المخالفات (${al.length})</h2>
+  ${al.length===0?`<div class="bg-white rounded-2xl p-8 text-center shadow-sm"><div style="font-size:32px">✅</div><div style="font-weight:bold;color:var(--p);margin-top:8px">لا تنبيهات</div></div>`:al.map(a=>`<div class="bg-white rounded-2xl p-5 shadow-sm" style="border-right:4px solid ${a.sev==='h'?'#dc2626':'#f59e0b'}"><div style="display:flex;gap:12px;align-items:start"><div style="width:44px;height:44px;border-radius:12px;background:${a.sev==='h'?'#fee2e2':'#fef3c7'};display:flex;align-items:center;justify-content:center;font-size:24px">${a.sev==='h'?'🚨':'⚠️'}</div><div style="flex:1"><div style="font-weight:900">${esc(a.title)}</div><p style="font-size:14px;color:#475569;margin-top:4px">${esc(a.msg)}</p></div><button onclick="DB.resolved.push('${a.id}');save();render()" class="bg-p text-white text-xs font-bold px-3 py-2 rounded-lg">✓</button></div></div>`).join('')}</div></div>`;
+}
+function fuU(id,st){document.getElementById('mdl').innerHTML=`<div class="mdl" onclick="if(event.target===this)this.remove()"><div class="bg-white rounded-2xl p-6 w-full max-w-md"><h3 style="font-weight:900;font-size:18px;margin-bottom:16px">${st==='yes'?'✓ حضر':st==='no'?'✗ لم يحضر':'📝 ملاحظة'}</h3><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">ملاحظات</label><textarea id="fuN" rows="3" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></textarea></div><div style="display:flex;gap:8px;margin-top:16px"><button onclick="doFu('${id}','${st}')" class="flex-1 bg-p text-white font-bold py-2.5 rounded-xl">حفظ</button><button onclick="this.closest('.mdl').remove()" class="px-4 bg-slate-100 font-bold py-2.5 rounded-xl">إلغاء</button></div></div></div>`}
+function doFu(id,st){const n=document.getElementById('fuN').value.trim();if(st==='note'&&!n){toast('اكتب ملاحظة','err');return}const f=DB.followups.find(x=>x.id===id);if(st==='note'){f.note=n}else{f.status=st;f.note=n;f.resolved=true;f.resolvedAt=Date.now()}save();document.getElementById('mdl').innerHTML='';toast('✓');render()}
+
+/* ============ الإعدادات ============ */
+function renderSettings(){
+  const c=DB.config;
+  return `<div class="space-y-5 max-w-4xl"><header><h1 style="font-size:24px;font-weight:900">⚙️ الإعدادات</h1><p style="font-size:13px;color:#64748b;margin-top:4px">للمدير فقط</p></header>
+  <div class="bg-white rounded-2xl p-6 shadow-sm space-y-4"><h3 style="font-weight:900;padding-right:12px;border-right:4px solid var(--p);margin-bottom:16px">🎨 المظهر</h3><div><label style="display:block;font-size:14px;font-weight:bold;margin-bottom:8px">لون المنصة</label><div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px">${Object.entries(TH).map(([k,t])=>`<button onclick="DB.config.theme='${k}';save();theme();render()" style="padding:12px;border-radius:12px;border:2px solid ${c.theme===k?'#1e293b':'#e2e8f0'}"><div style="width:100%;height:26px;border-radius:8px;background:${t[0]};margin-bottom:6px"></div><div style="font-size:10px;font-weight:bold">${t[5]}</div></button>`).join('')}</div></div><div><label style="display:block;font-size:14px;font-weight:bold;margin-bottom:8px">حجم الواجهة</label><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">${[['small','صغير'],['medium','متوسط'],['large','كبير'],['xl','كبير جداً']].map(([v,l])=>`<button onclick="DB.config.uiSize='${v}';save();size();render()" style="padding:12px;border-radius:12px;border:2px solid ${c.uiSize===v?'var(--p)':'#e2e8f0'};background:${c.uiSize===v?'var(--s)':'#fff'};font-weight:bold;font-size:12px">${l}</button>`).join('')}</div></div></div>
+  <div class="bg-white rounded-2xl p-6 shadow-sm space-y-4"><h3 style="font-weight:900;padding-right:12px;border-right:4px solid var(--p);margin-bottom:16px">🖨️ الطباعة</h3><div><label style="display:block;font-size:14px;font-weight:bold;margin-bottom:8px">خط الطباعة</label><div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">${['Cairo','Tajawal','Almarai','Amiri','Noto Kufi Arabic'].map(f=>`<button onclick="DB.config.printFont='${f}';save();render()" style="padding:12px;border-radius:12px;border:2px solid ${c.printFont===f?'var(--p)':'#e2e8f0'};background:${c.printFont===f?'var(--s)':'#fff'};font-family:'${f}',sans-serif;font-size:14px;font-weight:bold">${f}</button>`).join('')}</div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><div><label style="display:block;font-size:14px;font-weight:bold;margin-bottom:4px">حجم الخط</label><select onchange="DB.config.printSize=this.value;save();render()" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-bold bg-white">${[10,11,12,13,14,15,16,18].map(n=>`<option ${c.printSize==n?'selected':''}>${n}</option>`).join('')}</select></div><div><label style="display:block;font-size:14px;font-weight:bold;margin-bottom:4px">السماكة</label><select onchange="DB.config.printWeight=this.value;save();render()" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-bold bg-white"><option value="400" ${c.printWeight=='400'?'selected':''}>عادي</option><option value="600" ${c.printWeight=='600'?'selected':''}>شبه عريض</option><option value="700" ${c.printWeight=='700'?'selected':''}>عريض</option><option value="900" ${c.printWeight=='900'?'selected':''}>عريض جداً</option></select></div></div></div>
+  <div class="bg-white rounded-2xl p-6 shadow-sm space-y-4"><h3 style="font-weight:900;padding-right:12px;border-right:4px solid var(--p);margin-bottom:16px">🏫 الهوية</h3><div><label style="display:block;font-size:14px;font-weight:bold;margin-bottom:4px">اسم المنصة</label><input id="sP" value="${esc(c.platformName)}" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div><div><label style="display:block;font-size:14px;font-weight:bold;margin-bottom:4px">اسم المدرسة</label><input id="sS" value="${esc(c.schoolName)}" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div><div><label style="display:block;font-size:14px;font-weight:bold;margin-bottom:4px">السطر الوزاري</label><input id="sM" value="${esc(c.ministry)}" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div><div><label style="display:block;font-size:14px;font-weight:bold;margin-bottom:4px">المديرية</label><input id="sD" value="${esc(c.directorate)}" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><div><label style="display:block;font-size:14px;font-weight:bold;margin-bottom:4px">الشعار الأيمن</label><input type="file" id="sLR" accept="image/*" class="text-sm">${c.logoR?`<div style="margin-top:8px;display:flex;gap:8px;align-items:center"><img src="${c.logoR}" style="width:50px;height:50px;object-fit:contain;border-radius:8px;border:1px solid #e2e8f0"><button onclick="DB.config.logoR='';save();render()" style="font-size:12px;color:#dc2626;font-weight:bold">حذف</button></div>`:''}</div><div><label style="display:block;font-size:14px;font-weight:bold;margin-bottom:4px">الشعار الأيسر</label><input type="file" id="sLL" accept="image/*" class="text-sm">${c.logoL?`<div style="margin-top:8px;display:flex;gap:8px;align-items:center"><img src="${c.logoL}" style="width:50px;height:50px;object-fit:contain;border-radius:8px;border:1px solid #e2e8f0"><button onclick="DB.config.logoL='';save();render()" style="font-size:12px;color:#dc2626;font-weight:bold">حذف</button></div>`:''}</div></div></div>
+  <div class="bg-white rounded-2xl p-6 shadow-sm space-y-4"><h3 style="font-weight:900;padding-right:12px;border-right:4px solid var(--p);margin-bottom:16px">📋 تذييل الطباعة</h3><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">نص اللجنة</label><input id="sC" value="${esc(c.committee)}" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">القسم الإداري</label><input id="sAD" value="${esc(c.adminDept)}" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">مسمى المدير</label><input id="sPT" value="${esc(c.principalTitle)}" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">اسم المدير</label><input id="sPN" value="${esc(c.principalName)}" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">مسمى الزائر الصحي</label><input id="sHVT" value="${esc(c.healthVisitorTitle)}" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">اسم الزائر الصحي</label><input id="sHVN" value="${esc(c.healthVisitorName)}" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div></div></div>
+  <div class="bg-white rounded-2xl p-6 shadow-sm space-y-4"><h3 style="font-weight:900;padding-right:12px;border-right:4px solid var(--p);margin-bottom:16px">💬 قوالب واتساب</h3><div style="background:#eff6ff;border-right:4px solid #3b82f6;padding:12px;border-radius:12px;font-size:12px">المتغيرات: <code>{student}</code> <code>{grade}</code> <code>{section}</code> <code>{behavior}</code> <code>{points}</code> <code>{action}</code> <code>{desc}</code> (النص اللائحي) <code>{date}</code> <code>{school}</code> <code>{reason}</code></div><div><label style="display:block;font-size:14px;font-weight:bold;margin-bottom:4px">قالب رسالة المخالفة</label><textarea id="sWB" rows="8" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-xs font-mono">${esc(c.waBehavior)}</textarea></div><div><label style="display:block;font-size:14px;font-weight:bold;margin-bottom:4px">قالب رسالة التحويل الصحي</label><textarea id="sWH" rows="8" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-xs font-mono">${esc(c.waHealth)}</textarea></div></div>
+  <button onclick="svSet()" class="w-full bg-p text-white font-black py-3.5 rounded-xl shadow">💾 حفظ الإعدادات</button>
+  <div class="bg-white rounded-2xl p-6 shadow-sm space-y-3"><h3 style="font-weight:900;color:#dc2626">⚠️ إجراءات متقدمة</h3><div style="display:flex;flex-wrap:wrap;gap:8px"><button onclick="bk()" class="bg-p text-white font-bold px-4 py-2 rounded-xl text-sm">💾 نسخة احتياطية</button><button onclick="restore()" class="bg-white border-2 border-slate-200 font-bold px-4 py-2 rounded-xl text-sm">📤 استيراد</button><button onclick="if(confirm('حذف كل البيانات؟')){localStorage.clear();location.reload()}" class="bg-red-50 text-red-600 font-bold px-4 py-2 rounded-xl text-sm">🗑️ إعادة تعيين</button></div></div></div>`;
+}
+function svSet(){
+  const g=id=>document.getElementById(id)?.value||'';
+  DB.config.platformName=g('sP');DB.config.schoolName=g('sS');DB.config.ministry=g('sM');DB.config.directorate=g('sD');
+  DB.config.committee=g('sC');DB.config.adminDept=g('sAD');DB.config.principalTitle=g('sPT');DB.config.principalName=g('sPN');
+  DB.config.healthVisitorTitle=g('sHVT');DB.config.healthVisitorName=g('sHVN');
+  DB.config.waBehavior=g('sWB');DB.config.waHealth=g('sWH');
+  const fr=document.getElementById('sLR').files[0],fl=document.getElementById('sLL').files[0];
+  let p=0;const done=()=>{if(p===0){save();nav();toast('✓ تم');render()}};
+  if(fr){p++;const r=new FileReader();r.onload=e=>{DB.config.logoR=e.target.result;p--;done()};r.readAsDataURL(fr)}
+  if(fl){p++;const r=new FileReader();r.onload=e=>{DB.config.logoL=e.target.result;p--;done()};r.readAsDataURL(fl)}
+  if(p===0)done();
+}
+
+/* ============ Render ============ */
+function render(){
+  const el=document.getElementById('ct');
+  if(!el)return;
+  const ae=document.activeElement;
+  const keepId=(ae&&ae.id&&el.contains(ae)&&ae.tagName==='INPUT'&&ae.type==='text')?ae.id:null;
+  const keepPos=keepId?ae.selectionStart:null;
+  Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}});charts={};
+  const m={home:renderHome,entry:renderEntry,records:renderRecords,analytics:renderAnalytics,students:renderStudents,health:renderHealth,htrans:renderHealthTransfer,hreport:renderHealthReport,users:renderUsers,behaviors:renderBehaviors,actions:renderActions,reports:renderReports,alerts:renderAlerts,settings:renderSettings};
+  try{el.innerHTML=(m[pg]||renderHome)()}catch(e){console.error('render:',e);el.innerHTML='<div class="bg-white rounded-2xl p-8 text-center"><div style="font-size:48px;margin-bottom:12px">⚠️</div><div style="font-weight:900;color:#dc2626">حدث خطأ في التحميل</div><div style="font-size:12px;color:#64748b;margin-top:8px">'+e.message+'</div></div>'}
+  if(keepId){const n=document.getElementById(keepId);if(n){n.focus();try{n.setSelectionRange(keepPos,keepPos)}catch(e){}}}
+  if(pg==='entry')onActChange();
+  if(pg==='analytics')setTimeout(drawCharts,100);
+}
+
+/* ============ بدء ============ */
+async function boot(){
+  try {
+    nav();
+    go('home');
+    setTimeout(async ()=>{
+      if(!CLOUD.enabled){upCloud('📴 محلي');return}
+      upCloud('⬇️ تحميل...');
+      const ok=await cloudPull(false);
+      if(ok){render();upCloud('✅ متزامن')}
+      else{upCloud('✅ جاهز')}
+      if(!window._syncTimer){window._syncTimer=setInterval(async()=>{
+        if(CLOUD.syncing||!navigator.onLine)return;
+        const changed=await cloudPull(true);
+        const busy=document.querySelector('#mdl .mdl')||document.querySelector('.dd:not(.hidden)')||pg==='entry'||['INPUT','SELECT','TEXTAREA'].includes(document.activeElement&&document.activeElement.tagName);
+        if(changed&&!busy){render();nav()}
+      },15000)}
+    },500);
+    setInterval(()=>{
+      const e=document.getElementById('bkSt');
+      if(!e)return;
+      const m=BK.last?Math.floor((Date.now()-BK.last)/60000):null;
+      e.textContent=(BK.enabled?'🟢':'⏸️')+' '+(m===null?'—':m<1?'الآن':'قبل '+m+'د')+' · '+BK.n+'/'+BK.int;
+    },10000);
+  } catch(e) {
+    console.error('Boot error:', e);
+  }
+}
+const sess=sessionStorage.getItem('alm_sess');
+if(sess){const u=DB.users.find(x=>x.id===sess);if(u){USER=u;document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');document.getElementById('usr').textContent=u.name;boot()}}
+</script>
+
+<!-- ============================================================
+     إضافة: المخالفات اليومية (نافذة المعلمين + صفحة المسؤول + طباعة)
+     هذه الكتلة مضافة فقط، ولم يُعدَّل أي سطر في الكود الأصلي أعلاه
+     ============================================================ -->
+<script>
+(function(){
+const DEF_DAILY=[
+ {id:'D1',cat:'داخل الحصة',name:'خروج من الحصة بدون إذن'},
+ {id:'D2',cat:'داخل الحصة',name:'الحديث والإزعاج أثناء الشرح'},
+ {id:'D3',cat:'داخل الحصة',name:'النوم أثناء الحصة'},
+ {id:'D4',cat:'داخل الحصة',name:'عدم إحضار الكتب والأدوات'},
+ {id:'D5',cat:'داخل الحصة',name:'عدم أداء الواجب'},
+ {id:'D6',cat:'داخل الحصة',name:'استخدام هاتف أو جهاز ممنوع'},
+ {id:'D7',cat:'داخل الحصة',name:'عدم الالتزام بتوجيهات المعلم'},
+ {id:'D8',cat:'داخل الحصة',name:'تصرفات أخرى داخل الحصة'},
+ {id:'D9',cat:'الممرات والساحة',name:'الجري أو الإزعاج في الممرات'},
+ {id:'D10',cat:'الممرات والساحة',name:'التواجد في الممر وقت الحصة'},
+ {id:'D11',cat:'الممرات والساحة',name:'التأخر في الدخول للفصل'},
+ {id:'D12',cat:'الممرات والساحة',name:'تصرفات أخرى في الممرات'},
+ {id:'D13',cat:'اعتداء وشجار',name:'اعتداء بالضرب'},
+ {id:'D14',cat:'اعتداء وشجار',name:'شجار'},
+ {id:'D15',cat:'اعتداء وشجار',name:'ألفاظ نابية أو إساءة'},
+ {id:'D16',cat:'اعتداء وشجار',name:'تهديد زميل'},
+ {id:'D17',cat:'أخرى',name:'عبث بممتلكات المدرسة'},
+ {id:'D18',cat:'أخرى',name:'مخالفة أخرى (اذكرها في الوصف)'}
+];
+const cv=s=>String(s||'').replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).trim();
+const arSort=(a,b)=>a.name.localeCompare(b.name,'ar');
+const INP='class="w-full rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm"';
+const LBL='style="display:block;font-size:13px;font-weight:bold;margin-bottom:6px"';
+
+/* ================= نافذة المعلمين ================= */
+const TP={accts:[],bank:[],stu:[],school:'',acct:null,sid:'',vid:'',sent:0};
+function tpEl(){return document.getElementById('tp')}
+function tpHead(extra){return `<div class="bg-grad text-white" style="padding:16px"><div style="max-width:720px;margin:auto;display:flex;align-items:center;gap:10px"><div style="font-size:28px">🏫</div><div style="flex:1"><div style="font-weight:900;font-size:16px">${esc(TP.school)}</div><div style="font-size:12px;opacity:.9">السلوكيات اليومية</div></div>${extra||''}</div></div>`}
+async function tpMount(){
+  const ov=document.createElement('div');ov.id='tp';
+  ov.style.cssText="position:fixed;inset:0;z-index:300;overflow-y:auto;background:var(--bg);font-family:'Cairo',system-ui,sans-serif;direction:rtl";
+  ov.innerHTML='<div style="padding:60px 20px;text-align:center;font-weight:bold;color:#64748b">⏳ جاري التحميل...</div>';
+  document.body.appendChild(ov);
+  ['login','app'].forEach(i=>{const e=document.getElementById(i);if(e)e.style.display='none'});
+  if(!sbClient){ov.innerHTML='<div style="padding:60px 20px;text-align:center;font-weight:bold;color:#dc2626">⚠️ الاتصال بالسحابة غير متاح</div>';return}
+  try{
+    const {data,error}=await sbClient.from('app_data').select('payload').eq('id','main').single();
+    if(error||!data||!data.payload)throw new Error('no data');
+    const p=data.payload;
+    TP.accts=Array.isArray(p.teacherAccounts)?p.teacherAccounts:[];
+    TP.bank=(Array.isArray(p.dailyBank)&&p.dailyBank.length)?p.dailyBank:DEF_DAILY;
+    TP.stu=Array.isArray(p.students)?p.students:[];
+    TP.school=(p.config&&p.config.schoolName)||'';
+    if(p.config&&TH[p.config.theme]){const t=TH[p.config.theme],r=document.documentElement.style;r.setProperty('--p',t[0]);r.setProperty('--l',t[1]);r.setProperty('--d',t[2]);r.setProperty('--s',t[3]);r.setProperty('--bg',t[4])}
+  }catch(e){ov.innerHTML='<div style="padding:60px 20px;text-align:center;font-weight:bold;color:#dc2626">⚠️ تعذر تحميل البيانات، حدّث الصفحة</div>';return}
+  const sid=sessionStorage.getItem('tp_sess');
+  TP.acct=TP.accts.find(x=>x.id===sid)||null;
+  tpShow();
+}
+function tpShow(){
+  const ov=tpEl();
+  if(!TP.acct){
+    ov.innerHTML=tpHead()+`<div style="max-width:420px;margin:24px auto;padding:0 16px"><div class="bg-white rounded-2xl p-6 shadow-sm space-y-3"><h2 style="font-weight:900;font-size:18px;text-align:center">🔐 دخول المعلمين</h2><div><label ${LBL}>اسم المستخدم</label><input id="tpU" ${INP} autocomplete="off"></div><div><label ${LBL}>الرقم السري</label><input id="tpP" type="password" ${INP} onkeydown="if(event.key==='Enter')tpLogin()"></div><div id="tpE" class="hidden bg-red-50 text-red-600 p-3 rounded-xl text-sm font-bold"></div><button onclick="tpLogin()" class="w-full bg-p text-white font-black py-3 rounded-xl shadow">دخول</button></div></div>`;
+    return;
+  }
+  const nm=localStorage.getItem('tp_name')||'';
+  ov.innerHTML=tpHead(`<button onclick="tpOut()" style="background:rgba(255,255,255,.2);padding:6px 12px;border-radius:10px;font-size:12px;font-weight:bold">خروج 🚪</button>`)+`<div style="max-width:720px;margin:16px auto;padding:0 12px 40px" class="space-y-4">
+  <div class="bg-white rounded-2xl p-4 shadow-sm"><label ${LBL}>👤 اسم المعلم (المسجِّل) *</label><input id="tpN" value="${esc(nm)}" ${INP} placeholder="اكتب اسمك"></div>
+  <div class="bg-white rounded-2xl p-4 shadow-sm"><label ${LBL}>🔍 الطالب *</label>
+    <div class="grid grid-cols-2 gap-2 mb-2"><select id="tpG" onchange="tpList()" ${INP}><option value="">كل الصفوف</option>${GR.map(g=>`<option>${g}</option>`).join('')}</select><select id="tpSc" onchange="tpList()" ${INP}><option value="">كل الشعب</option>${SC.map(s=>`<option>${s}</option>`).join('')}</select></div>
+    <input id="tpQ" oninput="tpList()" ${INP} placeholder="اكتب اسم الطالب..." autocomplete="off">
+    <div id="tpL" style="margin-top:8px;max-height:260px;overflow-y:auto"></div><div id="tpSel"></div></div>
+  <div class="bg-white rounded-2xl p-4 shadow-sm"><label ${LBL}>⚠️ المخالفة *</label><div id="tpB"></div></div>
+  <div class="bg-white rounded-2xl p-4 shadow-sm"><label ${LBL}>📝 وصف الفعل <span style="font-weight:normal;color:#94a3b8">(اختياري)</span></label><textarea id="tpD" rows="3" ${INP} placeholder="اكتب وصفاً مختصراً إن رغبت..."></textarea></div>
+  <div id="tpM"></div>
+  <button id="tpS" onclick="tpSend()" class="w-full bg-p text-white font-black py-3.5 rounded-xl shadow">📤 إرسال المخالفة</button>
+  <div style="text-align:center;font-size:12px;color:#64748b" id="tpC">${TP.sent?`تم إرسال ${TP.sent} في هذه الجلسة`:''}</div></div>`;
+  tpBank();tpList();tpSelDraw();
+}
+window.tpLogin=function(){
+  const u=cv(document.getElementById('tpU').value),p=cv(document.getElementById('tpP').value),e=document.getElementById('tpE');
+  const bad=m=>{e.textContent=m;e.classList.remove('hidden');setTimeout(()=>e.classList.add('hidden'),4000)};
+  if(!u){bad('❌ أدخل اسم المستخدم');return}
+  if(!TP.accts.length){bad('❌ لا توجد حسابات معلمين، راجع الإدارة');return}
+  const a=TP.accts.find(x=>x.username===u);
+  if(!a){bad('❌ اسم المستخدم غير موجود');return}
+  if(a.password&&String(a.password).trim()!==''&&String(a.password)!==p){bad('❌ الرقم السري غير صحيح');return}
+  TP.acct=a;sessionStorage.setItem('tp_sess',a.id);tpShow();
+};
+window.tpOut=function(){TP.acct=null;TP.sid='';TP.vid='';sessionStorage.removeItem('tp_sess');tpShow()};
+window.tpList=function(){
+  const box=document.getElementById('tpL');if(!box)return;
+  const q=document.getElementById('tpQ').value.trim(),g=document.getElementById('tpG').value,s=document.getElementById('tpSc').value;
+  if(!q&&!g&&!s){box.innerHTML='<div style="font-size:12px;color:#94a3b8;padding:6px">اختر الصف/الشعبة أو اكتب اسم الطالب</div>';return}
+  const list=TP.stu.filter(x=>{if(g&&x.grade!==+g)return false;if(s&&x.section!==+s)return false;if(q&&!x.name.includes(q))return false;return true}).sort(arSort).slice(0,40);
+  box.innerHTML=list.length?list.map(x=>`<button type="button" onclick="tpPick('${x.id}')" style="width:100%;text-align:right;padding:10px 12px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;gap:8px"><b style="font-size:14px">${esc(x.name)}</b><span style="font-size:12px;color:#64748b;white-space:nowrap">صف ${x.grade} · ${x.section}</span></button>`).join(''):'<div style="padding:10px;text-align:center;color:#94a3b8;font-size:13px">لا نتائج</div>';
+};
+window.tpPick=function(id){TP.sid=id;document.getElementById('tpQ').value='';document.getElementById('tpG').value='';document.getElementById('tpSc').value='';tpList();tpSelDraw()};
+function tpSelDraw(){
+  const el=document.getElementById('tpSel');if(!el)return;
+  const s=TP.stu.find(x=>x.id===TP.sid);
+  el.innerHTML=s?`<div style="margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--s);border:2px solid var(--p);display:flex;align-items:center;gap:10px"><div style="flex:1"><div style="font-weight:900;font-size:14px">${esc(s.name)}</div><div style="font-size:12px;color:#64748b">صف ${s.grade} · شعبة ${s.section}</div></div><button onclick="TP_clr()" style="color:#dc2626;font-weight:bold">✕</button></div>`:'';
+}
+window.TP_clr=function(){TP.sid='';tpSelDraw()};
+window.tpBank=function(){
+  const el=document.getElementById('tpB');if(!el)return;
+  const cats=[...new Set(TP.bank.map(b=>b.cat||'أخرى'))];
+  el.innerHTML=cats.map(c=>`<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:900;color:#64748b;margin-bottom:6px">${esc(c)}</div><div style="display:flex;flex-wrap:wrap;gap:6px">${TP.bank.filter(b=>(b.cat||'أخرى')===c).map(b=>{const on=TP.vid===b.id;return `<button type="button" onclick="tpV('${b.id}')" style="padding:8px 12px;border-radius:12px;font-size:13px;font-weight:bold;border:2px solid ${on?'var(--p)':'#e2e8f0'};background:${on?'var(--p)':'#fff'};color:${on?'#fff':'#1e293b'}">${esc(b.name)}</button>`}).join('')}</div></div>`).join('');
+};
+window.tpV=function(id){TP.vid=id;tpBank()};
+window.tpSend=async function(){
+  const m=document.getElementById('tpM');
+  const say=(t,ok)=>{m.innerHTML=`<div class="${ok?'bg-emerald-50 text-emerald-700':'bg-red-50 text-red-600'} p-3 rounded-xl text-sm font-bold text-center">${t}</div>`;setTimeout(()=>{if(m)m.innerHTML=''},4000)};
+  const name=document.getElementById('tpN').value.trim();
+  if(!name){say('❌ اكتب اسمك',false);return}
+  const s=TP.stu.find(x=>x.id===TP.sid);if(!s){say('❌ اختر الطالب',false);return}
+  const v=TP.bank.find(x=>x.id===TP.vid);if(!v){say('❌ اختر المخالفة',false);return}
+  const btn=document.getElementById('tpS');btn.disabled=true;btn.style.opacity='.6';
+  localStorage.setItem('tp_name',name);
+  const now=Date.now();
+  try{
+    const {error}=await sbClient.from('app_data').upsert({id:'dv_'+now+Math.floor(Math.random()*1000),payload:{studentId:s.id,studentName:s.name,grade:s.grade,section:s.section,violation:v.name,cat:v.cat||'',desc:document.getElementById('tpD').value.trim(),teacher:name,account:TP.acct.name||TP.acct.username,createdAt:now,status:'pending'},updated_at:new Date(now).toISOString(),updated_by:name});
+    if(error)throw error;
+    TP.sent++;TP.sid='';TP.vid='';document.getElementById('tpD').value='';
+    tpSelDraw();tpBank();document.getElementById('tpC').textContent=`تم إرسال ${TP.sent} في هذه الجلسة`;
+    say('✅ تم إرسال المخالفة للإدارة',true);
+  }catch(e){say('❌ فشل الإرسال، تحقق من الاتصال وحاول مجدداً',false)}
+  btn.disabled=false;btn.style.opacity='1';
+};
+if(/[?&]teachers?(=|&|$)/.test(location.search)||location.hash==='#teachers'){tpMount();return}
+
+/* ================= جانب المسؤول ================= */
+const DV={items:[],loaded:false,busy:false};
+function ensure(){
+  if(!Array.isArray(DB.teacherAccounts))DB.teacherAccounts=[];
+  if(!Array.isArray(DB.dailyBank)||!DB.dailyBank.length)DB.dailyBank=DEF_DAILY.map(x=>({...x}));
+  if(!Array.isArray(DB.dailyRecords))DB.dailyRecords=[];
+}
+async function dvLoad(){
+  if(!sbClient)return false;
+  try{
+    const {data,error}=await sbClient.from('app_data').select('id,payload').like('id','dv%');
+    if(error)return false;
+    DV.items=(data||[]).filter(r=>r.payload&&r.payload.createdAt&&r.payload.status!=='deleted').map(r=>Object.assign({},r.payload,{id:r.id})).sort((a,b)=>b.createdAt-a.createdAt);
+    DV.loaded=true;return true;
+  }catch(e){return false}
+}
+async function dvSetStatus(id,status){
+  const it=DV.items.find(i=>i.id===id);if(!it||!sbClient)return;
+  it.status=status;
+  const {id:_x,...pl}=it;
+  try{await sbClient.from('app_data').upsert({id,payload:pl,updated_at:new Date().toISOString(),updated_by:USER?USER.name:''})}catch(e){}
+}
+async function dvRemove(id){
+  let ok=false;
+  try{const r=await sbClient.from('app_data').delete().eq('id',id).select();ok=!r.error&&r.data&&r.data.length>0}catch(e){}
+  if(!ok){await dvSetStatus(id,'deleted')}
+  DV.items=DV.items.filter(i=>i.id!==id);
+}
+function pendingCount(){return DV.items.filter(i=>i.status==='pending').length}
+function dvBadge(){
+  const b=[...document.querySelectorAll('#nav button')].find(x=>(x.getAttribute('onclick')||'').includes("go('daily')"));
+  if(!b)return;
+  const o=b.querySelector('.dvb');if(o)o.remove();
+  const n=pendingCount();
+  if(n>0)b.insertAdjacentHTML('beforeend',`<span class="dvb bg-red-600 text-white text-xs rounded-full px-1.5 font-black">${n}</span>`);
+}
+function itemHTML(x,entry){
+  return `<div class="bg-white rounded-2xl p-4 shadow-sm" style="border-right:4px solid ${entry?'#3b82f6':'#f59e0b'}">
+  <div style="font-weight:900;font-size:14px">${esc(x.studentName)} <span style="font-size:12px;color:#64748b;font-weight:bold">· صف ${esc(x.grade)} / شعبة ${esc(x.section)}</span></div>
+  <div style="margin-top:6px"><span style="background:#fee2e2;color:#b91c1c;font-weight:bold;font-size:12px;padding:3px 10px;border-radius:999px">${esc(x.violation)}</span> <span style="font-size:11px;color:#64748b">${esc(x.cat||'')}</span></div>
+  ${x.desc?`<div style="font-size:13px;color:#334155;margin-top:6px;background:#f8fafc;padding:8px;border-radius:8px">📝 ${esc(x.desc)}</div>`:''}
+  <div style="font-size:11px;color:#64748b;margin-top:6px">👤 ${esc(x.teacher||'—')} · 🕒 ${fmtDT(x.createdAt)}</div>
+  <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button onclick="dvSave('${x.id}')" class="flex-1 bg-p text-white font-bold py-2 rounded-lg text-xs">💾 حفظ ضمن السلوكيات اليومية</button><button onclick="dvEntry('${x.id}')" class="flex-1 bg-blue-600 text-white font-bold py-2 rounded-lg text-xs">✍️ ${entry?'فتح في تسجيل سلوك':'تسجيل مخالفة'}</button><button onclick="dvDel('${x.id}')" class="px-3 bg-red-50 text-red-600 font-bold py-2 rounded-lg text-xs">🗑️</button></div></div>`;
+}
+function listHTML(){
+  const p=DV.items.filter(i=>i.status==='pending'),e=DV.items.filter(i=>i.status==='entry');
+  let h=!DV.loaded?'<div class="bg-white rounded-2xl p-8 text-center shadow-sm" style="color:#64748b;font-weight:bold">⏳ جاري التحميل...</div>':(p.length?`<div style="display:flex;flex-direction:column;gap:12px">${p.map(x=>itemHTML(x,false)).join('')}</div>`:'<div class="bg-white rounded-2xl p-8 text-center shadow-sm"><div style="font-size:32px">✅</div><div style="font-weight:bold;color:var(--p);margin-top:8px">لا توجد مخالفات واردة</div></div>');
+  if(e.length)h+=`<details style="margin-top:14px"><summary style="cursor:pointer;font-weight:bold;font-size:13px;color:#1d4ed8">✍️ حُوّلت لتسجيل سلوك (${e.length})</summary><div style="display:flex;flex-direction:column;gap:12px;margin-top:10px">${e.map(x=>itemHTML(x,true)).join('')}</div></details>`;
+  return h;
+}
+function savedHTML(){
+  const r=DB.dailyRecords||[];
+  if(!r.length)return '<div class="bg-white rounded-2xl p-6 text-center shadow-sm" style="color:#94a3b8;font-size:13px">لا توجد سلوكيات يومية محفوظة</div>';
+  return `<div class="bg-white rounded-2xl shadow-sm overflow-x-auto"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr style="background:var(--s)"><th style="padding:8px">التاريخ</th><th style="padding:8px">الطالب</th><th style="padding:8px">الصف</th><th style="padding:8px">المخالفة</th><th style="padding:8px">المعلم</th><th></th></tr></thead><tbody>${r.slice(0,50).map(x=>`<tr style="border-top:1px solid #f1f5f9"><td style="padding:8px;white-space:nowrap">${fmtD(x.createdAt)}</td><td style="padding:8px;font-weight:bold">${esc(x.studentName)}</td><td style="padding:8px;text-align:center">${esc(x.grade)}/${esc(x.section)}</td><td style="padding:8px">${esc(x.violation)}${x.desc?`<div style="color:#64748b;font-size:11px">${esc(x.desc)}</div>`:''}</td><td style="padding:8px">${esc(x.teacher||'')}</td><td style="padding:8px"><button onclick="dvDelRec('${x.id}')" style="color:#dc2626">🗑️</button></td></tr>`).join('')}</tbody></table>${r.length>50?`<div style="padding:8px;text-align:center;font-size:11px;color:#94a3b8">يُعرض آخر 50 من ${r.length} — الطباعة تشمل الكل</div>`:''}</div>`;
+}
+function dvRefresh(){
+  const l=document.getElementById('dvList');if(l)l.innerHTML=listHTML();
+  const s=document.getElementById('dvSaved');if(s)s.innerHTML=savedHTML();
+  const a=document.getElementById('dvStP');if(a)a.textContent=pendingCount();
+  const b=document.getElementById('dvStS');if(b)b.textContent=(DB.dailyRecords||[]).length;
+  dvBadge();
+}
+function renderDaily(){
+  ensure();
+  if(!DV.loaded&&!DV.busy){DV.busy=true;dvLoad().then(()=>{DV.busy=false;DV.loaded=true;dvRefresh()})}
+  const link=location.href.split(/[?#]/)[0]+'?teachers';
+  const cats=[...new Set(DB.dailyBank.map(b=>b.cat||'أخرى'))];
+  return `<div class="space-y-5 max-w-4xl"><header><h1 style="font-size:24px;font-weight:900">🗓️ المخالفات اليومية</h1><p style="font-size:13px;color:#64748b;margin-top:4px">مخالفات يسجلها المعلمون من نافذتهم الخاصة وتصل هنا للمراجعة</p></header>
+  <div class="bg-white rounded-2xl p-4 shadow-sm" style="border-right:4px solid var(--p)"><div style="font-weight:900;font-size:13px;margin-bottom:6px">🔗 رابط نافذة المعلمين</div><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="dvLink" readonly value="${esc(link)}" class="flex-1 rounded-xl border-2 border-slate-200 px-3 py-2 text-xs" style="min-width:200px;direction:ltr"><button onclick="dvCopy()" class="bg-p text-white font-bold px-4 py-2 rounded-xl text-xs">📋 نسخ</button></div></div>
+  <div class="grid grid-cols-2 gap-3"><div class="text-white rounded-2xl p-4" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><div style="font-size:12px;font-weight:600">واردة بانتظار القرار</div><div id="dvStP" style="font-size:28px;font-weight:900">${pendingCount()}</div></div><div class="text-white rounded-2xl p-4" style="background:linear-gradient(135deg,#059669,#065f46)"><div style="font-size:12px;font-weight:600">محفوظة (سلوكيات يومية)</div><div id="dvStS" style="font-size:28px;font-weight:900">${DB.dailyRecords.length}</div></div></div>
+  <div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2 style="font-weight:900;padding-right:12px;border-right:4px solid #f59e0b">📥 المخالفات الواردة</h2><button onclick="dvReload()" class="bg-slate-100 font-bold px-3 py-1.5 rounded-lg text-xs">🔄 تحديث</button></div><div id="dvList">${listHTML()}</div></div>
+  <div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2 style="font-weight:900;padding-right:12px;border-right:4px solid var(--p)">📝 السلوكيات اليومية المحفوظة</h2><button onclick="rptDaily()" class="bg-p text-white font-bold px-3 py-1.5 rounded-lg text-xs">🖨️ طباعة</button></div><div id="dvSaved">${savedHTML()}</div></div>
+  <details class="bg-white rounded-2xl p-5 shadow-sm"><summary style="cursor:pointer;font-weight:900">⚙️ إدارة حسابات المعلمين وبنك المخالفات</summary>
+    <div style="margin-top:16px"><div style="font-weight:900;font-size:14px;margin-bottom:8px">👥 حسابات المعلمين (مشتركة)</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px"><input id="dvAU" placeholder="اسم المستخدم" ${INP}><input id="dvAP" placeholder="الرقم السري" ${INP}><input id="dvAN" placeholder="وصف (مثال: معلمو الصف 5)" ${INP}></div>
+    <button onclick="dvAddAcct()" class="mt-2 bg-p text-white font-bold px-4 py-2 rounded-xl text-sm">➕ إضافة حساب</button>
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">${DB.teacherAccounts.length?DB.teacherAccounts.map(a=>`<div style="display:flex;align-items:center;gap:8px;background:#f8fafc;padding:8px 12px;border-radius:10px;font-size:13px"><div style="flex:1"><b>${esc(a.username)}</b> · <span style="direction:ltr;display:inline-block">${esc(a.password||'بدون رقم سري')}</span>${a.name?` · ${esc(a.name)}`:''}</div><button onclick="dvDelAcct('${a.id}')" style="color:#dc2626">🗑️</button></div>`).join(''):'<div style="font-size:12px;color:#94a3b8">لا توجد حسابات — أضف حساباً ليتمكن المعلمون من الدخول</div>'}</div></div>
+    <div style="margin-top:22px"><div style="font-weight:900;font-size:14px;margin-bottom:8px">📚 بنك المخالفات اليومية</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px"><input id="dvBC" list="dvCats" placeholder="التصنيف (مثال: داخل الحصة)" ${INP}><datalist id="dvCats">${cats.map(c=>`<option value="${esc(c)}">`).join('')}</datalist><input id="dvBN" placeholder="اسم المخالفة" ${INP}></div>
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button onclick="dvAddBank()" class="bg-p text-white font-bold px-4 py-2 rounded-xl text-sm">➕ إضافة مخالفة</button><button onclick="dvResetBank()" class="bg-slate-100 font-bold px-4 py-2 rounded-xl text-sm">↩️ استعادة البنك الافتراضي</button></div>
+    <div style="margin-top:12px">${cats.map(c=>`<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:900;color:#64748b;margin-bottom:6px">${esc(c)}</div><div style="display:flex;flex-wrap:wrap;gap:6px">${DB.dailyBank.filter(b=>(b.cat||'أخرى')===c).map(b=>`<span style="display:inline-flex;align-items:center;gap:6px;background:var(--s);padding:5px 10px;border-radius:10px;font-size:12px;font-weight:bold">${esc(b.name)}<button onclick="dvDelBank('${b.id}')" style="color:#dc2626">✕</button></span>`).join('')}</div></div>`).join('')}</div></div>
+  </details></div>`;
+}
+window.dvCopy=function(){const i=document.getElementById('dvLink');i.select();try{navigator.clipboard.writeText(i.value)}catch(e){document.execCommand('copy')}toast('✓ تم نسخ الرابط')};
+window.dvReload=async function(){const ok=await dvLoad();dvRefresh();toast(ok?'✓ تم التحديث':'تعذر التحديث',ok?'ok':'err')};
+window.dvSave=async function(id){
+  const x=DV.items.find(i=>i.id===id);if(!x)return;
+  ensure();
+  if(!DB.dailyRecords.some(r=>r.srcId===id)){
+    DB.dailyRecords.unshift({id:uid0('DR'),srcId:id,studentId:x.studentId,studentName:x.studentName,grade:x.grade,section:x.section,violation:x.violation,cat:x.cat||'',desc:x.desc||'',teacher:x.teacher||'',account:x.account||'',createdAt:x.createdAt,savedAt:Date.now(),savedBy:USER?USER.name:''});
+    save();
+  }
+  await dvRemove(id);dvRefresh();toast('✓ حُفظت ضمن السلوكيات اليومية');
+};
+window.dvEntry=function(id){
+  const x=DV.items.find(i=>i.id===id);if(!x)return;
+  if(!gS(x.studentId)){toast('الطالب غير موجود في القائمة','err');return}
+  E={sid:'',bid:'',aid:'',note:'مخالفة يومية: '+x.violation+(x.desc?' — '+x.desc:''),uid:DB.users[0]?DB.users[0].id:'',an:'',customBeh:'',customAct:'',reviewedBy:x.teacher||''};
+  go('entry');
+  pickS(x.studentId,'s');
+  if(x.status==='pending'){dvSetStatus(id,'entry').then(dvBadge)}
+  toast('✓ حدّد السلوك المناسب ثم احفظ');
+};
+window.dvDel=async function(id){if(!confirm('حذف هذه المخالفة؟'))return;await dvRemove(id);dvRefresh();toast('✓ تم الحذف')};
+window.dvDelRec=function(id){if(!confirm('حذف من السلوكيات اليومية المحفوظة؟'))return;DB.dailyRecords=DB.dailyRecords.filter(r=>r.id!==id);save();dvRefresh();toast('✓ تم الحذف')};
+window.dvAddAcct=function(){
+  const u=cv(document.getElementById('dvAU').value),p=cv(document.getElementById('dvAP').value),n=document.getElementById('dvAN').value.trim();
+  if(!u){toast('أدخل اسم المستخدم','err');return}
+  ensure();
+  if(DB.teacherAccounts.some(a=>a.username===u)){toast('اسم المستخدم موجود','err');return}
+  DB.teacherAccounts.push({id:uid0('TA'),username:u,password:p,name:n});save();render();toast('✓ تمت الإضافة');
+};
+window.dvDelAcct=function(id){if(!confirm('حذف الحساب؟'))return;DB.teacherAccounts=DB.teacherAccounts.filter(a=>a.id!==id);save();render()};
+window.dvAddBank=function(){
+  const c=document.getElementById('dvBC').value.trim()||'أخرى',n=document.getElementById('dvBN').value.trim();
+  if(!n){toast('أدخل اسم المخالفة','err');return}
+  ensure();DB.dailyBank.push({id:uid0('D'),cat:c,name:n});save();render();toast('✓ تمت الإضافة');
+};
+window.dvDelBank=function(id){if(!confirm('حذف المخالفة من البنك؟'))return;DB.dailyBank=DB.dailyBank.filter(b=>b.id!==id);save();render()};
+window.dvResetBank=function(){if(!confirm('استبدال البنك بالقائمة الافتراضية؟'))return;DB.dailyBank=DEF_DAILY.map(x=>({...x}));save();render()};
+
+/* ===== الطباعة: السلوكيات اليومية ===== */
+window.rptDaily=function(){
+  ensure();
+  document.getElementById('mdl').innerHTML=`<div class="mdl" onclick="if(event.target===this)this.remove()"><div class="bg-white rounded-2xl p-6 w-full max-w-md"><h3 style="font-weight:900;font-size:18px;margin-bottom:16px">السلوكيات اليومية</h3><div style="display:flex;flex-direction:column;gap:12px">
+  <div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">اسم الطالب (اختياري)</label><input id="dpN" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm" placeholder="جزء من الاسم"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">الصف</label><select id="dpG" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-bold bg-white"><option value="">الكل</option>${GR.map(g=>`<option>${g}</option>`).join('')}</select></div><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">الشعبة</label><select id="dpS" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-bold bg-white"><option value="">الكل</option>${SC.map(s=>`<option>${s}</option>`).join('')}</select></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">من تاريخ</label><input id="dpF" type="date" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">إلى تاريخ</label><input id="dpT" type="date" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div></div></div>
+  <div style="display:flex;gap:8px;margin-top:16px"><button onclick="doDaily()" class="flex-1 bg-p text-white font-bold py-2.5 rounded-xl">🖨️ طباعة</button><button onclick="this.closest('.mdl').remove()" class="px-4 bg-slate-100 font-bold py-2.5 rounded-xl">إلغاء</button></div></div></div>`;
+};
+window.doDaily=function(){
+  const q=document.getElementById('dpN').value.trim(),g=document.getElementById('dpG').value,s=document.getElementById('dpS').value,f=document.getElementById('dpF').value,t=document.getElementById('dpT').value;
+  const fT=f?new Date(f+'T00:00:00').getTime():0,tT=t?new Date(t+'T23:59:59').getTime():Infinity;
+  const list=(DB.dailyRecords||[]).filter(r=>(!q||(r.studentName||'').includes(q))&&(!g||+r.grade===+g)&&(!s||+r.section===+s)&&r.createdAt>=fT&&r.createdAt<=tT).sort((a,b)=>b.createdAt-a.createdAt);
+  if(!list.length){toast('لا توجد سلوكيات يومية','err');return}
+  const td='border:1px solid #999;padding:5px;font-size:10px';
+  const rows=list.map((r,i)=>`<tr><td style="${td};text-align:center">${i+1}</td><td style="${td}">${fmtDT(r.createdAt)}</td><td style="${td}">${esc(r.studentName)}</td><td style="${td};text-align:center">${esc(r.grade)}/${esc(r.section)}</td><td style="${td}">${esc(r.violation)}</td><td style="${td}">${esc(r.desc||'—')}</td><td style="${td}">${esc(r.teacher||'—')}</td></tr>`).join('');
+  const th='border:1px solid #999;padding:6px';
+  document.getElementById('mdl').innerHTML='';
+  prt(`<div style="max-width:900px;margin:auto">${rHdr()}<div style="text-align:center;font-size:15px;font-weight:900;margin-bottom:12px;background:var(--c-primary-soft);padding:8px;border-radius:6px">السلوكيات اليومية (${list.length})</div><table style="width:100%;border-collapse:collapse;font-size:10px"><thead><tr style="background:var(--c-primary);color:white"><th style="${th}">#</th><th style="${th}">التاريخ</th><th style="${th}">الطالب</th><th style="${th}">الصف</th><th style="${th}">المخالفة</th><th style="${th}">الوصف</th><th style="${th}">المسجِّل</th></tr></thead><tbody>${rows}</tbody></table>${rFtr()}</div>`);
+};
+
+/* ===== الربط بالمنصة دون تعديل الكود الأصلي ===== */
+NAV.splice(Math.max(1,NAV.findIndex(n=>n.id==='records')+1),0,{id:'daily',l:'المخالفات اليومية',i:'🗓️',ad:1});
+const _nav=nav;nav=function(){_nav.apply(this,arguments);dvBadge()};
+const _render=render;
+render=function(){
+  if(pg!=='daily')return _render.apply(this,arguments);
+  const el=document.getElementById('ct');if(!el)return;
+  try{Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}});charts={}}catch(e){}
+  try{el.innerHTML=renderDaily()}catch(e){console.error(e);el.innerHTML='<div class="bg-white rounded-2xl p-8 text-center">⚠️ '+esc(e.message)+'</div>'}
+};
+const _rr=renderReports;
+renderReports=function(){return _rr.apply(this,arguments).replace(/<\/div><\/div>\s*$/,rc('rptDaily()','🗓️','السلوكيات اليومية','المخالفات اليومية المحفوظة')+'</div></div>')};
+setInterval(async()=>{
+  if(!USER||!USER.isAdmin||!sbClient||document.hidden)return;
+  if(await dvLoad()){
+    if(pg==='daily'){dvRefresh()}else{dvBadge()}
+  }
+},15000);
+if(USER)nav();
+})();
+</script>
+
+</body>
+</html>
