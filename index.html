@@ -1306,11 +1306,11 @@ function dvBadge(){
 }
 function itemHTML(x,entry){
   return `<div class="bg-white rounded-2xl p-4 shadow-sm" style="border-right:4px solid ${entry?'#3b82f6':'#f59e0b'}">
-  <div style="font-weight:900;font-size:14px">${esc(x.studentName)} <span style="font-size:12px;color:#64748b;font-weight:bold">· صف ${esc(x.grade)} / شعبة ${esc(x.section)}</span></div>
-  <div style="margin-top:6px"><span style="background:#fee2e2;color:#b91c1c;font-weight:bold;font-size:12px;padding:3px 10px;border-radius:999px">${esc(x.violation)}</span> <span style="font-size:11px;color:#64748b">${esc(x.cat||'')}</span></div>
-  ${x.desc?`<div style="font-size:13px;color:#334155;margin-top:6px;background:#f8fafc;padding:8px;border-radius:8px">📝 ${esc(x.desc)}</div>`:''}
-  <div style="font-size:11px;color:#64748b;margin-top:6px">👤 ${esc(x.teacher||'—')} · 🕒 ${fmtDT(x.createdAt)}</div>
-  <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button onclick="dvSave('${x.id}')" class="flex-1 bg-p text-white font-bold py-2 rounded-lg text-xs">💾 حفظ ضمن السلوكيات اليومية</button><button onclick="dvEntry('${x.id}')" class="flex-1 bg-blue-600 text-white font-bold py-2 rounded-lg text-xs">✍️ ${entry?'فتح في تسجيل سلوك':'تسجيل مخالفة'}</button><button onclick="dvDel('${x.id}')" class="px-3 bg-red-50 text-red-600 font-bold py-2 rounded-lg text-xs">🗑️</button></div></div>`;
+  <div style="font-weight:900;font-size:19px">${esc(x.studentName)} <span style="font-size:15px;color:#475569;font-weight:bold">· صف ${esc(x.grade)} / شعبة ${esc(x.section)}</span></div>
+  <div style="margin-top:6px"><span style="background:#fee2e2;color:#b91c1c;font-weight:900;font-size:17px;padding:5px 14px;border-radius:999px">${esc(x.violation)}</span> <span style="font-size:14px;color:#475569;font-weight:bold">${esc(x.cat||'')}</span></div>
+  ${x.desc?`<div style="font-size:16px;font-weight:bold;color:#1e293b;margin-top:8px;background:#f8fafc;padding:10px;border-radius:8px;line-height:1.7">📝 ${esc(x.desc)}</div>`:''}
+  <div style="font-size:14px;color:#475569;margin-top:8px">👤 ${esc(x.teacher||'—')} · 🕒 ${fmtDT(x.createdAt)}</div>
+  <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button onclick="dvSave('${x.id}')" class="flex-1 bg-p text-white font-bold py-2.5 rounded-lg text-sm">💾 حفظ ضمن السلوكيات اليومية</button><button onclick="dvEntry('${x.id}')" class="flex-1 bg-blue-600 text-white font-bold py-2.5 rounded-lg text-sm">✍️ ${entry?'فتح في تسجيل سلوك':'تسجيل مخالفة'}</button><button onclick="dvDel('${x.id}')" class="px-3 bg-red-50 text-red-600 font-bold py-2 rounded-lg text-xs">🗑️</button></div></div>`;
 }
 function listHTML(){
   const p=DV.items.filter(i=>i.status==='pending'),e=DV.items.filter(i=>i.status==='entry');
@@ -1321,7 +1321,7 @@ function listHTML(){
 function savedHTML(){
   const r=DB.dailyRecords||[];
   if(!r.length)return '<div class="bg-white rounded-2xl p-6 text-center shadow-sm" style="color:#94a3b8;font-size:13px">لا توجد سلوكيات يومية محفوظة</div>';
-  return `<div class="bg-white rounded-2xl shadow-sm overflow-x-auto"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr style="background:var(--s)"><th style="padding:8px">التاريخ</th><th style="padding:8px">الطالب</th><th style="padding:8px">الصف</th><th style="padding:8px">المخالفة</th><th style="padding:8px">المعلم</th><th></th></tr></thead><tbody>${r.slice(0,50).map(x=>`<tr style="border-top:1px solid #f1f5f9"><td style="padding:8px;white-space:nowrap">${fmtD(x.createdAt)}</td><td style="padding:8px;font-weight:bold">${esc(x.studentName)}</td><td style="padding:8px;text-align:center">${esc(x.grade)}/${esc(x.section)}</td><td style="padding:8px">${esc(x.violation)}${x.desc?`<div style="color:#64748b;font-size:11px">${esc(x.desc)}</div>`:''}</td><td style="padding:8px">${esc(x.teacher||'')}</td><td style="padding:8px"><button onclick="dvDelRec('${x.id}')" style="color:#dc2626">🗑️</button></td></tr>`).join('')}</tbody></table>${r.length>50?`<div style="padding:8px;text-align:center;font-size:11px;color:#94a3b8">يُعرض آخر 50 من ${r.length} — الطباعة تشمل الكل</div>`:''}</div>`;
+  return `<div class="bg-white rounded-2xl shadow-sm overflow-x-auto"><table style="width:100%;font-size:15px;border-collapse:collapse"><thead><tr style="background:var(--s)"><th style="padding:8px">التاريخ</th><th style="padding:8px">الطالب</th><th style="padding:8px">الصف</th><th style="padding:8px">المخالفة</th><th style="padding:8px">المعلم</th><th></th></tr></thead><tbody>${r.slice(0,50).map(x=>`<tr style="border-top:1px solid #f1f5f9"><td style="padding:8px;white-space:nowrap">${fmtD(x.createdAt)}</td><td style="padding:8px;font-weight:bold">${esc(x.studentName)}</td><td style="padding:8px;text-align:center">${esc(x.grade)}/${esc(x.section)}</td><td style="padding:8px">${esc(x.violation)}${x.desc?`<div style="color:#475569;font-size:14px">${esc(x.desc)}</div>`:''}</td><td style="padding:8px">${esc(x.teacher||'')}</td><td style="padding:8px"><button onclick="dvDelRec('${x.id}')" style="color:#dc2626">🗑️</button></td></tr>`).join('')}</tbody></table>${r.length>50?`<div style="padding:8px;text-align:center;font-size:11px;color:#94a3b8">يُعرض آخر 50 من ${r.length} — الطباعة تشمل الكل</div>`:''}</div>`;
 }
 function dvRefresh(){
   const l=document.getElementById('dvList');if(l)l.innerHTML=listHTML();
@@ -1429,6 +1429,63 @@ setInterval(async()=>{
   }
 },15000);
 if(USER)nav();
+})();
+</script>
+
+
+<!-- ============================================================
+     إضافة 2: السلوكيات اليومية في تقرير الطالب + تعديل التواقيع + إصلاح الواتساب
+     (كتلة مضافة فقط، دون تعديل الكود الأصلي)
+     ============================================================ -->
+<script>
+(function(){
+/* ---- 1) المخالفات السلوكية اليومية داخل تقرير الطالب ---- */
+const _srh=stuReportHTML;
+stuReportHTML=function(sid){
+  const h=_srh.apply(this,arguments);
+  const list=(DB.dailyRecords||[]).filter(r=>r.studentId===sid).sort((a,b)=>b.createdAt-a.createdAt);
+  const td='border:1px solid #999;padding:5px;font-size:10px',th='border:1px solid #999;padding:6px';
+  const rows=list.map(r=>`<tr><td style="${td}">${fmtD(r.createdAt)}</td><td style="${td}">${esc(r.violation||'')}</td><td style="${td}">${esc(r.desc||'—')}</td><td style="${td}">${esc(r.teacher||'—')}</td></tr>`).join('');
+  const sec=`<div style="margin-top:16px"><div style="text-align:center;font-size:14px;font-weight:900;margin-bottom:8px;background:var(--c-primary-soft);padding:7px;border-radius:6px">المخالفات السلوكية اليومية (${list.length})</div><table style="width:100%;border-collapse:collapse;font-size:10px"><thead><tr style="background:var(--c-primary);color:white"><th style="${th}">التاريخ</th><th style="${th}">المخالفة</th><th style="${th}">الوصف</th><th style="${th}">المسجِّل</th></tr></thead><tbody>${rows||`<tr><td colspan="4" style="border:1px solid #999;padding:12px;text-align:center">لا توجد مخالفات يومية</td></tr>`}</tbody></table></div>`;
+  const f=rFtr(),k=h.lastIndexOf(f);
+  return k>=0?h.slice(0,k)+sec+h.slice(k):h.replace(/<\/div>\s*$/,sec+'</div>');
+};
+
+/* ---- 2) تعديل التواقيع (المعلم / الأخصائي / المدير) من الإعدادات ---- */
+const DEF_SIG=['توقيع المعلم','توقيع الأخصائي','توقيع مدير المدرسة'];
+const _rs=renderSettings;
+renderSettings=function(){
+  const html=_rs.apply(this,arguments);
+  const sg=(DB.config.signatures&&DB.config.signatures.length)?DB.config.signatures:DEF_SIG;
+  const card=`<div class="bg-white rounded-2xl p-6 shadow-sm space-y-3"><h3 style="font-weight:900;padding-right:12px;border-right:4px solid var(--p);margin-bottom:8px">✍️ التواقيع في نموذج طباعة السلوك</h3><div style="font-size:12px;color:#64748b">عدّل مسمى كل توقيع كما يظهر في صفحة الطباعة. اترك الخانة فارغة لحذف التوقيع.</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px">${sg.concat(['']).map(s=>`<input class="sgI w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm" value="${esc(s)}" placeholder="توقيع جديد (اختياري)" onchange="sgSet()">`).join('')}</div><button onclick="sgReset()" class="bg-slate-100 font-bold px-4 py-2 rounded-xl text-xs">↩️ استعادة الافتراضي</button></div>`;
+  return html.replace('<button onclick="svSet()"',card+'<button onclick="svSet()"');
+};
+window.sgSet=function(){
+  const v=[...document.querySelectorAll('.sgI')].map(i=>i.value.trim()).filter(Boolean);
+  DB.config.signatures=v.length?v:DEF_SIG.slice();
+  save();render();toast('✓ تم حفظ التواقيع');
+};
+window.sgReset=function(){DB.config.signatures=DEF_SIG.slice();save();render();toast('✓ تمت الاستعادة')};
+
+/* ---- 3) إصلاح التحويل للواتساب ---- */
+fill=function(t,v){let o=String(t==null?'':t);Object.entries(v).forEach(([k,x])=>{o=o.replace(new RegExp('\\{'+k+'\\}','g'),()=>String(x==null?'':x))});return o};
+wa=function(phone,msg){
+  const ar='٠١٢٣٤٥٦٧٨٩',fa='۰۱۲۳۴۵۶۷۸۹';
+  let c=String(phone||'').replace(/[٠-٩]/g,d=>ar.indexOf(d)).replace(/[۰-۹]/g,d=>fa.indexOf(d)).replace(/\D/g,'');
+  if(!c){toast('لا يوجد رقم ولي أمر مسجل','err');return}
+  if(c.startsWith('00'))c=c.slice(2);
+  else if(c.startsWith('0'))c=c.replace(/^0+/,'');
+  if(!c.startsWith('968')&&c.length<=8)c='968'+c;
+  const text=encodeURIComponent(msg||'');
+  const mobile=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  if(mobile){
+    // على الجوال: فتح مباشر في نفس النافذة ليتحول لتطبيق الواتساب (لا يتأثر بحجب النوافذ)
+    window.location.href='https://api.whatsapp.com/send?phone='+c+'&text='+text;
+  }else{
+    const w=window.open('https://web.whatsapp.com/send?phone='+c+'&text='+text,'_blank');
+    if(!w)window.location.href='https://api.whatsapp.com/send?phone='+c+'&text='+text;
+  }
+};
 })();
 </script>
 
