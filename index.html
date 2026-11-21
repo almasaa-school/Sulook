@@ -1489,5 +1489,52 @@ wa=function(phone,msg){
 })();
 </script>
 
+
+<!-- ============================================================
+     إضافة 3: معاينة التقارير قبل الطباعة + بحث طالب (اسم/صف/شعبة) في تقرير طالب
+     (كتلة مضافة فقط، دون تعديل الكود الأصلي)
+     ============================================================ -->
+<script>
+(function(){
+let PV='';
+window.pvShow=function(html){
+  PV=html;
+  const t=TH[DB.config.theme]||TH.emerald;
+  document.getElementById('mdl').innerHTML=`<div class="mdl" onclick="if(event.target===this)this.remove()"><div class="bg-white rounded-2xl w-full" style="max-width:960px;max-height:92vh;display:flex;flex-direction:column"><div style="display:flex;gap:8px;padding:12px;border-bottom:1px solid #e2e8f0;align-items:center"><div style="flex:1;font-weight:900">👁️ معاينة التقرير قبل الطباعة</div><button onclick="pvPrint()" class="bg-p text-white font-bold px-5 py-2 rounded-xl">🖨️ طباعة</button><button onclick="this.closest('.mdl').remove()" class="bg-slate-100 font-bold px-4 py-2 rounded-xl">إغلاق</button></div><div id="pvBody" style="overflow:auto;padding:16px;--c-primary:${t[0]};--c-primary-soft:${t[3]};font-family:'${DB.config.printFont}',sans-serif;background:#fff"><style>#pvBody table{border-collapse:collapse;width:100%}#pvBody td,#pvBody th{border:1px solid #999;padding:6px}</style>${html}</div></div></div>`;
+};
+window.pvPrint=function(){prt(PV)};
+function withPreview(fn){
+  return function(){
+    const orig=prt;
+    prt=function(h){prt=orig;pvShow(h)};
+    try{return fn.apply(this,arguments)}finally{prt=orig}
+  };
+}
+pRS=withPreview(pRS);
+doGR=withPreview(doGR);
+doCards=withPreview(doCards);
+pRecs=withPreview(pRecs);
+if(window.doDaily)window.doDaily=withPreview(window.doDaily);
+
+/* ---- بحث طالب في تقرير طالب: اسم + صف + شعبة ---- */
+const _rptStu=rptStu;
+rptStu=function(){
+  _rptStu.apply(this,arguments);
+  const inp=document.getElementById('rS');if(!inp)return;
+  inp.setAttribute('onfocus','sRS()');inp.setAttribute('autocomplete','off');
+  inp.parentElement.insertAdjacentHTML('beforebegin',`<div class="grid grid-cols-2 gap-2 mb-2"><select id="rG" onchange="sRS()" class="rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-bold bg-white"><option value="">كل الصفوف</option>${GR.map(g=>`<option>${g}</option>`).join('')}</select><select id="rSc" onchange="sRS()" class="rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-bold bg-white"><option value="">كل الشعب</option>${SC.map(s=>`<option>${s}</option>`).join('')}</select></div>`);
+};
+sRS=function(){
+  const q=document.getElementById('rS').value.trim();
+  const g=(document.getElementById('rG')||{}).value||'',s=(document.getElementById('rSc')||{}).value||'';
+  const d=document.getElementById('rD');
+  const list=DB.students.filter(x=>{if(g&&x.grade!==+g)return false;if(s&&x.section!==+s)return false;if(q&&!x.name.includes(q))return false;return true}).sort((a,b)=>a.name.localeCompare(b.name,'ar')).slice(0,30);
+  if(!list.length){d.innerHTML='<div style="padding:12px;text-align:center;color:#94a3b8;font-size:13px">لا نتائج</div>';d.classList.remove('hidden');return}
+  d.innerHTML=list.map(x=>{let n=esc(x.name);if(q){const i=x.name.indexOf(q);if(i>=0)n=esc(x.name.slice(0,i))+`<span style="background:#FEF3C7;font-weight:900">${esc(x.name.slice(i,i+q.length))}</span>`+esc(x.name.slice(i+q.length))}return `<div class="ddi" onclick="pkRS('${x.id}')"><div><div style="font-size:14px;font-weight:bold">${n}</div><div style="font-size:12px;color:#64748b">صف ${x.grade} · شعبة ${x.section}</div></div></div>`}).join('');
+  d.classList.remove('hidden');
+};
+})();
+</script>
+
 </body>
 </html>
