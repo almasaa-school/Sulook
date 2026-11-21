@@ -1263,7 +1263,7 @@ window.tpSend=async function(){
     TP.sent++;TP.sid='';TP.vid='';document.getElementById('tpD').value='';
     tpSelDraw();tpBank();document.getElementById('tpC').textContent=`تم إرسال ${TP.sent} في هذه الجلسة`;
     say('✅ تم إرسال المخالفة للإدارة',true);
-  }catch(e){say('❌ فشل الإرسال، تحقق من الاتصال وحاول مجدداً',false)}
+  }catch(e){say('❌ فشل الإرسال: '+esc((e&&(e.message||e.details))||'تحقق من الاتصال'),false)}
   btn.disabled=false;btn.style.opacity='1';
 };
 if(/teacher/i.test(location.search)||/teacher/i.test(location.hash)||/teachers?\/?$/i.test(location.pathname)){tpMount();return}
