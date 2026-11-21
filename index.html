@@ -1266,23 +1266,25 @@ window.tpSend=async function(){
   }catch(e){say('❌ فشل الإرسال، تحقق من الاتصال وحاول مجدداً',false)}
   btn.disabled=false;btn.style.opacity='1';
 };
-if(/[?&]teachers?(=|&|$)/.test(location.search)||location.hash==='#teachers'){tpMount();return}
+if(/teacher/i.test(location.search)||/teacher/i.test(location.hash)||/teachers?\/?$/i.test(location.pathname)){tpMount();return}
 
 /* ================= جانب المسؤول ================= */
-const DV={items:[],loaded:false,busy:false};
+const DV={items:[],loaded:false,busy:false,err:''};
 function ensure(){
   if(!Array.isArray(DB.teacherAccounts))DB.teacherAccounts=[];
   if(!Array.isArray(DB.dailyBank)||!DB.dailyBank.length)DB.dailyBank=DEF_DAILY.map(x=>({...x}));
   if(!Array.isArray(DB.dailyRecords))DB.dailyRecords=[];
 }
 async function dvLoad(){
-  if(!sbClient)return false;
+  if(!sbClient){DV.err='الاتصال بالسحابة غير متاح';DV.loaded=true;return false}
   try{
-    const {data,error}=await sbClient.from('app_data').select('id,payload').like('id','dv%');
-    if(error)return false;
-    DV.items=(data||[]).filter(r=>r.payload&&r.payload.createdAt&&r.payload.status!=='deleted').map(r=>Object.assign({},r.payload,{id:r.id})).sort((a,b)=>b.createdAt-a.createdAt);
+    let r=await sbClient.from('app_data').select('id,payload').like('id','dv%');
+    if(r.error)r=await sbClient.from('app_data').select('id,payload').neq('id','main');
+    if(r.error){DV.err='تعذر تحميل المخالفات: '+(r.error.message||'');DV.loaded=true;return false}
+    DV.err='';
+    DV.items=(r.data||[]).filter(x=>/^dv/.test(x.id)&&x.payload&&x.payload.createdAt&&x.payload.status!=='deleted').map(x=>Object.assign({},x.payload,{id:x.id})).sort((a,b)=>b.createdAt-a.createdAt);
     DV.loaded=true;return true;
-  }catch(e){return false}
+  }catch(e){DV.err='تعذر تحميل المخالفات';DV.loaded=true;return false}
 }
 async function dvSetStatus(id,status){
   const it=DV.items.find(i=>i.id===id);if(!it||!sbClient)return;
@@ -1314,7 +1316,7 @@ function itemHTML(x,entry){
 }
 function listHTML(){
   const p=DV.items.filter(i=>i.status==='pending'),e=DV.items.filter(i=>i.status==='entry');
-  let h=!DV.loaded?'<div class="bg-white rounded-2xl p-8 text-center shadow-sm" style="color:#64748b;font-weight:bold">⏳ جاري التحميل...</div>':(p.length?`<div style="display:flex;flex-direction:column;gap:12px">${p.map(x=>itemHTML(x,false)).join('')}</div>`:'<div class="bg-white rounded-2xl p-8 text-center shadow-sm"><div style="font-size:32px">✅</div><div style="font-weight:bold;color:var(--p);margin-top:8px">لا توجد مخالفات واردة</div></div>');
+  let h=DV.err?`<div class="bg-red-50 text-red-600 rounded-2xl p-4 text-center font-bold" style="font-size:14px">⚠️ ${esc(DV.err)}</div>`:!DV.loaded?'<div class="bg-white rounded-2xl p-8 text-center shadow-sm" style="color:#64748b;font-weight:bold">⏳ جاري التحميل...</div>':(p.length?`<div style="display:flex;flex-direction:column;gap:12px">${p.map(x=>itemHTML(x,false)).join('')}</div>`:'<div class="bg-white rounded-2xl p-8 text-center shadow-sm"><div style="font-size:32px">✅</div><div style="font-weight:bold;color:var(--p);margin-top:8px">لا توجد مخالفات واردة</div></div>');
   if(e.length)h+=`<details style="margin-top:14px"><summary style="cursor:pointer;font-weight:bold;font-size:13px;color:#1d4ed8">✍️ حُوّلت لتسجيل سلوك (${e.length})</summary><div style="display:flex;flex-direction:column;gap:12px;margin-top:10px">${e.map(x=>itemHTML(x,true)).join('')}</div></details>`;
   return h;
 }
@@ -1333,10 +1335,10 @@ function dvRefresh(){
 function renderDaily(){
   ensure();
   if(!DV.loaded&&!DV.busy){DV.busy=true;dvLoad().then(()=>{DV.busy=false;DV.loaded=true;dvRefresh()})}
-  const link=location.href.split(/[?#]/)[0]+'?teachers';
+  let base=localStorage.getItem('dv_link_base')||location.href.split(/[?#]/)[0];const link=base+(base.includes('?')?'&':'?')+'teachers';
   const cats=[...new Set(DB.dailyBank.map(b=>b.cat||'أخرى'))];
   return `<div class="space-y-5 max-w-4xl"><header><h1 style="font-size:24px;font-weight:900">🗓️ المخالفات اليومية</h1><p style="font-size:13px;color:#64748b;margin-top:4px">مخالفات يسجلها المعلمون من نافذتهم الخاصة وتصل هنا للمراجعة</p></header>
-  <div class="bg-white rounded-2xl p-4 shadow-sm" style="border-right:4px solid var(--p)"><div style="font-weight:900;font-size:13px;margin-bottom:6px">🔗 رابط نافذة المعلمين</div><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="dvLink" readonly value="${esc(link)}" class="flex-1 rounded-xl border-2 border-slate-200 px-3 py-2 text-xs" style="min-width:200px;direction:ltr"><button onclick="dvCopy()" class="bg-p text-white font-bold px-4 py-2 rounded-xl text-xs">📋 نسخ</button></div></div>
+  <div class="bg-white rounded-2xl p-4 shadow-sm" style="border-right:4px solid var(--p)"><div style="font-weight:900;font-size:13px;margin-bottom:6px">🔗 رابط نافذة المعلمين</div><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="dvLink" value="${esc(link)}" onchange="dvLinkSave()" class="flex-1 rounded-xl border-2 border-slate-200 px-3 py-2 text-xs" style="min-width:200px;direction:ltr"><button onclick="dvCopy()" class="bg-p text-white font-bold px-4 py-2 rounded-xl text-xs">📋 نسخ</button></div></div>
   <div class="grid grid-cols-2 gap-3"><div class="text-white rounded-2xl p-4" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><div style="font-size:12px;font-weight:600">واردة بانتظار القرار</div><div id="dvStP" style="font-size:28px;font-weight:900">${pendingCount()}</div></div><div class="text-white rounded-2xl p-4" style="background:linear-gradient(135deg,#059669,#065f46)"><div style="font-size:12px;font-weight:600">محفوظة (سلوكيات يومية)</div><div id="dvStS" style="font-size:28px;font-weight:900">${DB.dailyRecords.length}</div></div></div>
   <div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2 style="font-weight:900;padding-right:12px;border-right:4px solid #f59e0b">📥 المخالفات الواردة</h2><button onclick="dvReload()" class="bg-slate-100 font-bold px-3 py-1.5 rounded-lg text-xs">🔄 تحديث</button></div><div id="dvList">${listHTML()}</div></div>
   <div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2 style="font-weight:900;padding-right:12px;border-right:4px solid var(--p)">📝 السلوكيات اليومية المحفوظة</h2><button onclick="rptDaily()" class="bg-p text-white font-bold px-3 py-1.5 rounded-lg text-xs">🖨️ طباعة</button></div><div id="dvSaved">${savedHTML()}</div></div>
@@ -1351,6 +1353,7 @@ function renderDaily(){
     <div style="margin-top:12px">${cats.map(c=>`<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:900;color:#64748b;margin-bottom:6px">${esc(c)}</div><div style="display:flex;flex-wrap:wrap;gap:6px">${DB.dailyBank.filter(b=>(b.cat||'أخرى')===c).map(b=>`<span style="display:inline-flex;align-items:center;gap:6px;background:var(--s);padding:5px 10px;border-radius:10px;font-size:12px;font-weight:bold">${esc(b.name)}<button onclick="dvDelBank('${b.id}')" style="color:#dc2626">✕</button></span>`).join('')}</div></div>`).join('')}</div></div>
   </details></div>`;
 }
+window.dvLinkSave=function(){const v=document.getElementById('dvLink').value.trim().replace(/[?&]teachers?=?1?$/i,'');if(v)localStorage.setItem('dv_link_base',v);toast('✓ تم حفظ الرابط')};
 window.dvCopy=function(){const i=document.getElementById('dvLink');i.select();try{navigator.clipboard.writeText(i.value)}catch(e){document.execCommand('copy')}toast('✓ تم نسخ الرابط')};
 window.dvReload=async function(){const ok=await dvLoad();dvRefresh();toast(ok?'✓ تم التحديث':'تعذر التحديث',ok?'ok':'err')};
 window.dvSave=async function(id){
@@ -1550,7 +1553,7 @@ restore=function(){
         const d=JSON.parse(ev.target.result),n=d.data||d;
         if(!n||!Array.isArray(n.students))throw new Error('bad');
         DB=n;fixDB(DB);localStorage.setItem(KEY,JSON.stringify(DB));
-        if(sbClient)await cloudPush();
+        window.__cpAllow=true;if(sbClient)await cloudPush();
         alert('✅ تمت الاستعادة ('+DB.students.length+' طالب)');location.reload();
       }catch(x){alert('❌ الملف غير صالح')}
     };
@@ -1560,5 +1563,29 @@ restore=function(){
 };
 </script>
 
+
+<!-- إضافة 5: حماية من استبدال قائمة طلاب أكبر في السحابة بنسخة أقل -->
+<script>
+(function(){
+  let verified=false;
+  const _cp=cloudPush;
+  cloudPush=async function(){
+    if(!verified&&!window.__cpAllow&&sbClient){
+      try{
+        const {data}=await sbClient.from('app_data').select('payload').eq('id','main').single();
+        const rc=(data&&data.payload&&Array.isArray(data.payload.students))?data.payload.students.length:0;
+        const lc=(DB.students||[]).length;
+        if(rc>=20&&lc<rc*0.9){
+          if(!confirm('⚠️ تنبيه: السحابة فيها '+rc+' طالب، وهذا الجهاز فيه '+lc+' فقط.\nالمتابعة ستستبدل بيانات السحابة بالأقل.\n\nإلغاء = إيقاف الرفع (موصى به)')){
+            upCloud('⛔ أُوقف الرفع حماية للبيانات');return;
+          }
+        }
+        verified=true;
+      }catch(e){}
+    }
+    return _cp.apply(this,arguments);
+  };
+})();
+</script>
 </body>
 </html>
