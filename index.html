@@ -1643,5 +1643,100 @@ if(typeof pvShow==='function'){
 })();
 </script>
 
+
+<!-- ============================================================
+     إضافة 7: إصلاح الدخول (المستخدمون/كلمات المرور) + إصلاح الطباعة على الجوال
+     (كتلة مضافة فقط، دون تعديل الكود الأصلي)
+     ============================================================ -->
+<script>
+(function(){
+const PW='123456';
+const cvd=s=>String(s==null?'':s).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).trim();
+const DEF_USERS=[
+ {username:'haij',name:'د. حسن بن علي البلوشي',title:'مدير المدرسة',isAdmin:true},
+ {username:'almasaa2',name:'أحمد بن عبدالله العلي',title:'مساعد المدير',isAdmin:true},
+ {username:'almasaa3',name:'الأستاذ: ناصر الغداني',title:'معلم أول',isAdmin:false},
+ {username:'almasaa4',name:'الأستاذ: فوزي الصالحي',title:'معلم أول',isAdmin:false},
+ {username:'almasaa5',name:'الأستاذ: يحيى السابعي',title:'معلم أول',isAdmin:false},
+ {username:'almasaa6',name:'الأستاذ: محمد البلوشي',title:'معلم أول رياضيات',isAdmin:false},
+ {username:'almasaa7',name:'الأستاذ: سعيد الغداني',title:'معلم أول لغة إنجليزية',isAdmin:false},
+ {username:'almasaa1',name:'لجنة شؤون الطلبة',title:'لجنة شؤون الطلبة',isAdmin:false}
+];
+
+/* ---- 1) المستخدمون وكلمات المرور: توحيد وتطبيع عند كل تحميل/حفظ ---- */
+const _fix=fixDB;
+fixDB=function(obj){
+  _fix.apply(this,arguments);
+  if(!obj||!Array.isArray(obj.users)||!obj.config)return;
+  // تطبيع: إزالة المسافات وتحويل الأرقام العربية للإنجليزية في اسم المستخدم وكلمة المرور
+  obj.users.forEach(u=>{u.username=cvd(u.username);if(u.password)u.password=cvd(u.password)});
+  // إضافة المستخدمين المعتمدين مرة واحدة إن لم يكونوا موجودين
+  if(!obj.config.defUsersAdded){
+    DEF_USERS.forEach(d=>{
+      if(!obj.users.some(u=>String(u.username).toLowerCase()===d.username))
+        obj.users.push({id:'UD_'+d.username,name:d.name,title:d.title,username:d.username,password:PW,isAdmin:d.isAdmin});
+    });
+    obj.config.defUsersAdded=true;
+  }
+  // توحيد كلمة المرور 123456 مرة واحدة (قابلة للتغيير بعدها من إدارة المستخدمين)
+  if(!obj.config.pwUnified){
+    obj.users.forEach(u=>{if(u.username!=='almasaa')u.password=PW});
+    obj.config.pwUnified=true;
+  }
+};
+try{fixDB(DB);localStorage.setItem(KEY,JSON.stringify(DB))}catch(e){}
+
+/* ---- 2) الدخول: حروف كبيرة/صغيرة، وجلب المستخدمين من السحابة عند عدم وجودهم ---- */
+const uEl=document.getElementById('lgU'),pEl=document.getElementById('lgP');
+if(uEl){uEl.setAttribute('autocapitalize','none');uEl.setAttribute('autocorrect','off');uEl.setAttribute('spellcheck','false');uEl.setAttribute('autocomplete','username')}
+if(pEl){pEl.setAttribute('autocapitalize','none');pEl.setAttribute('autocomplete','current-password')}
+// حذف كلمة (اختيارية) من خانة كلمة المرور
+document.querySelectorAll('#login label span').forEach(s=>{if(/اختيار/.test(s.textContent))s.remove()});
+
+const _login=login;
+login=async function(){
+  const ue=document.getElementById('lgU'),pe=document.getElementById('lgP');
+  if(!ue||!pe)return _login.apply(this,arguments);
+  const find=()=>{const u=cvd(ue.value).toLowerCase();const m=DB.users.find(x=>String(x.username||'').toLowerCase()===u);if(m)ue.value=m.username;return m};
+  const ok=m=>m&&(!m.password||String(m.password).trim()===''||String(m.password)===cvd(pe.value));
+  let m=find();
+  if(!ok(m)&&cvd(ue.value)&&sbClient){
+    const e=document.getElementById('lgE');
+    if(e){e.textContent='⏳ جاري التحقق من السحابة...';e.classList.remove('hidden')}
+    try{await cloudPull(false)}catch(x){}
+    if(e)e.classList.add('hidden');
+    find();
+  }
+  return _login.apply(this,arguments);
+};
+
+// مستخدم جديد: كلمة المرور الافتراضية 123456 (قابلة للتغيير)
+const _edU=edU;
+edU=function(id){
+  _edU.apply(this,arguments);
+  if(!id){const p=document.getElementById('uP');if(p&&!p.value)p.value=PW}
+};
+
+/* ---- 3) الطباعة: داخل الصفحة نفسها (تعمل على iPhone/iPad بدل الـ iframe المخفي) ---- */
+prt=function(html){
+  const old=document.getElementById('printRoot');if(old)old.remove();
+  if(!document.getElementById('printCss')){
+    const st=document.createElement('style');st.id='printCss';
+    st.textContent='#printRoot{display:none}#printRoot table{border-collapse:collapse;width:100%}#printRoot td,#printRoot th{border:1px solid #999;padding:6px}@media print{body>*:not(#printRoot){display:none!important}#printRoot{display:block!important}@page{margin:1cm;size:A4}}';
+    document.head.appendChild(st);
+  }
+  const c=DB.config,t=TH[c.theme]||TH.emerald;
+  const root=document.createElement('div');root.id='printRoot';
+  root.style.cssText=`--c-primary:${t[0]};--c-primary-soft:${t[3]};font-family:'${c.printFont}',sans-serif;font-size:${c.printSize}pt;font-weight:${c.printWeight};direction:rtl;background:#fff;color:#000;padding:15px`;
+  root.innerHTML=html;
+  document.body.appendChild(root);
+  const clean=()=>{const r=document.getElementById('printRoot');if(r)r.remove();window.removeEventListener('afterprint',clean)};
+  window.addEventListener('afterprint',clean);
+  setTimeout(()=>{try{window.print()}catch(e){toast('تعذرت الطباعة','err')}},150);
+  setTimeout(clean,180000);
+};
+})();
+</script>
+
 </body>
 </html>
