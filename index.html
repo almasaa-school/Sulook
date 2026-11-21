@@ -1536,5 +1536,29 @@ sRS=function(){
 })();
 </script>
 
+
+<!-- إضافة 4: الاستعادة من نسخة احتياطية ترفع البيانات للسحابة أيضاً (حتى لا تُستبدل بالقديمة عند إعادة التحميل) -->
+<script>
+restore=function(){
+  const i=document.createElement('input');i.type='file';i.accept='.json';
+  i.onchange=e=>{
+    const f=e.target.files[0];if(!f)return;
+    if(!confirm('استبدال البيانات الحالية (على الجهاز وفي السحابة) بهذه النسخة؟'))return;
+    const r=new FileReader();
+    r.onload=async ev=>{
+      try{
+        const d=JSON.parse(ev.target.result),n=d.data||d;
+        if(!n||!Array.isArray(n.students))throw new Error('bad');
+        DB=n;fixDB(DB);localStorage.setItem(KEY,JSON.stringify(DB));
+        if(sbClient)await cloudPush();
+        alert('✅ تمت الاستعادة ('+DB.students.length+' طالب)');location.reload();
+      }catch(x){alert('❌ الملف غير صالح')}
+    };
+    r.readAsText(f);
+  };
+  i.click();
+};
+</script>
+
 </body>
 </html>
