@@ -1738,5 +1738,191 @@ prt=function(html){
 })();
 </script>
 
+
+<!-- ============================================================
+     إضافة 8: طباعة الجوال (فورية) + تصغير حجم PDF + النسخ الاحتياطية التلقائية واسترجاعها من الإعدادات
+     (كتلة مضافة فقط، دون تعديل الكود الأصلي)
+     ============================================================ -->
+<script>
+(function(){
+/* ---------- 1) الطباعة: استدعاء فوري داخل الضغطة (شرط iPhone) ---------- */
+prt=function(html){
+  const old=document.getElementById('printRoot');if(old)old.remove();
+  if(!document.getElementById('printCss')){
+    const st=document.createElement('style');st.id='printCss';
+    st.textContent='#printRoot{display:none}#printRoot table{border-collapse:collapse;width:100%}#printRoot td,#printRoot th{border:1px solid #999;padding:6px}@media print{body>*:not(#printRoot){display:none!important}#printRoot{display:block!important}@page{margin:1cm;size:A4}}';
+    document.head.appendChild(st);
+  }
+  const c=DB.config,t=TH[c.theme]||TH.emerald;
+  const root=document.createElement('div');root.id='printRoot';
+  root.style.cssText=`--c-primary:${t[0]};--c-primary-soft:${t[3]};font-family:'${c.printFont}',sans-serif;font-size:${c.printSize}pt;font-weight:${c.printWeight};direction:rtl;background:#fff;color:#000;padding:15px`;
+  root.innerHTML=html;
+  document.body.appendChild(root);
+  const clean=()=>{const r=document.getElementById('printRoot');if(r)r.remove();window.removeEventListener('afterprint',clean)};
+  window.addEventListener('afterprint',clean);
+  setTimeout(clean,180000);
+  try{window.print()}catch(e){toast('تعذرت الطباعة، استخدم زر PDF','err')}
+};
+
+/* ---------- 2) PDF بحجم صغير (JPEG مضغوط بدل PNG كبير) ---------- */
+pdf=async function(html,fn,phone,msg){
+  toast('⏳ جاري PDF...');
+  const t=TH[DB.config.theme]||TH.emerald;
+  const ifr=document.createElement('iframe');ifr.style.cssText='position:fixed;left:-9999px;top:0;width:800px;height:1200px;border:none';document.body.appendChild(ifr);
+  const d=ifr.contentDocument;d.open();
+  d.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>:root{--c-primary:${t[0]};--c-primary-soft:${t[3]}}body{font-family:'Cairo',sans-serif;padding:20px;background:#fff;width:760px;font-size:12pt}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:6px}</style></head><body>${html}</body></html>`);
+  d.close();
+  await new Promise(r=>setTimeout(r,1500));
+  try{
+    const c=await html2canvas(d.body,{scale:1.4,useCORS:true,backgroundColor:'#fff',width:760,windowWidth:760});
+    const {jsPDF}=window.jspdf;
+    const p=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
+    const pw=p.internal.pageSize.getWidth(),ph=p.internal.pageSize.getHeight();
+    const iw=pw-10,ih=(c.height*iw)/c.width;
+    if(ih<=ph-10){p.addImage(c.toDataURL('image/jpeg',0.7),'JPEG',5,5,iw,ih,undefined,'FAST')}
+    else{
+      let rm=ih,of=0;
+      while(rm>0){
+        const phh=Math.min(ph-10,rm);
+        const c2=document.createElement('canvas');c2.width=c.width;c2.height=Math.max(1,Math.round((phh/ih)*c.height));
+        const g=c2.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c2.width,c2.height);
+        g.drawImage(c,0,of*c.height/ih,c.width,c2.height,0,0,c.width,c2.height);
+        p.addImage(c2.toDataURL('image/jpeg',0.7),'JPEG',5,5,iw,phh,undefined,'FAST');
+        of+=phh;rm-=phh;if(rm>0)p.addPage();
+      }
+    }
+    const b=p.output('blob');const file=new File([b],fn,{type:'application/pdf'});
+    document.body.removeChild(ifr);
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      try{await navigator.share({files:[file],text:msg||'',title:fn});toast('✅ قائمة المشاركة')}
+      catch(e){if(e.name!=='AbortError'){const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=fn;document.body.appendChild(a);a.click();document.body.removeChild(a)}}
+    }else{
+      const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=fn;document.body.appendChild(a);a.click();document.body.removeChild(a);
+      toast('💾 تم تنزيل PDF ('+Math.round(b.size/1024)+' ك.ب)');
+      if(phone)setTimeout(()=>wa(phone,msg||''),500);
+    }
+  }catch(e){if(ifr.parentNode)document.body.removeChild(ifr);toast('فشل PDF','err')}
+};
+
+/* زر PDF / مشاركة داخل نافذة المعاينة (بديل مضمون إن لم تعمل الطباعة المباشرة) */
+if(typeof window.pvShow==='function'){
+  const _pv=window.pvShow;
+  window.pvShow=function(h){
+    _pv.apply(this,arguments);
+    window.__pvHtml=h;
+    const body=document.getElementById('pvBody');
+    const tb=body&&body.previousElementSibling;
+    if(tb&&!tb.querySelector('.pvPdf'))tb.querySelector('button').insertAdjacentHTML('afterend','<button class="pvPdf bg-blue-600 text-white font-bold px-4 py-2 rounded-xl" onclick="pdf(window.__pvHtml,\'تقرير.pdf\',\'\',\'\')">📄 PDF</button>');
+  };
+}
+
+/* ---------- 3) النسخ الاحتياطية التلقائية ---------- */
+const KEEP_DAYS=14,KEEP_PER_DAY=8,GAP_MS=2.5*3600*1000;
+const dkey=ts=>{const t=new Date(ts);return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')};
+const hsh=s=>{let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return h};
+let _db=null;
+function idb(){return new Promise((res,rej)=>{
+  if(_db)return res(_db);
+  if(!window.indexedDB)return rej(new Error('no idb'));
+  const r=indexedDB.open('almasaa_bk',1);
+  r.onupgradeneeded=()=>{r.result.createObjectStore('snaps',{keyPath:'ts'})};
+  r.onsuccess=()=>{_db=r.result;res(_db)};
+  r.onerror=()=>rej(r.error);
+})}
+async function idbAll(){const d=await idb();return new Promise((res,rej)=>{const q=d.transaction('snaps').objectStore('snaps').getAll();q.onsuccess=()=>res((q.result||[]).sort((a,b)=>b.ts-a.ts));q.onerror=()=>rej(q.error)})}
+async function idbGet(ts){const d=await idb();return new Promise((res,rej)=>{const q=d.transaction('snaps').objectStore('snaps').get(ts);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}
+async function idbPut(o){const d=await idb();return new Promise((res,rej)=>{const q=d.transaction('snaps','readwrite').objectStore('snaps').put(o);q.onsuccess=()=>res();q.onerror=()=>rej(q.error)})}
+async function idbDel(ts){const d=await idb();return new Promise((res,rej)=>{const q=d.transaction('snaps','readwrite').objectStore('snaps').delete(ts);q.onsuccess=()=>res();q.onerror=()=>rej(q.error)})}
+async function prune(){
+  const all=await idbAll();const days=[...new Set(all.map(x=>dkey(x.ts)))];
+  const keepDays=new Set(days.slice(0,KEEP_DAYS));const cnt={};
+  for(const x of all){const k=dkey(x.ts);cnt[k]=(cnt[k]||0)+1;if(!keepDays.has(k)||cnt[k]>KEEP_PER_DAY)await idbDel(x.ts)}
+}
+async function snapNow(label,force){
+  try{
+    if(!DB||!DB.students||!DB.students.length)return false;
+    const json=JSON.stringify(DB),h=hsh(json),all=await idbAll();
+    if(!force&&all[0]&&all[0].hash===h)return false;
+    await idbPut({ts:Date.now(),label:label||'تلقائية',students:DB.students.length,records:DB.records.length,size:json.length,hash:h,json});
+    await prune();
+    cloudSnap(h);
+    return true;
+  }catch(e){return false}
+}
+async function cloudSnap(h){
+  try{
+    if(!sbClient||!navigator.onLine||!DB.students.length)return;
+    const now=new Date(),slot=['a','b','c'][Math.min(2,Math.floor(now.getHours()/8))],id='bk_'+dkey(now.getTime())+'_'+slot;
+    if(localStorage.getItem('bk_cloud_last')===id+':'+h)return;
+    const all=await idbAll();const mx=Math.max(0,...all.map(x=>x.students||0));
+    if(mx>=20&&DB.students.length<mx*0.9)return; // لا نرفع نسخة سحابية أقل بكثير من المعتاد
+    const {error}=await sbClient.from('app_data').upsert({id,payload:{ts:Date.now(),students:DB.students.length,records:DB.records.length,data:DB},updated_at:now.toISOString(),updated_by:USER?USER.name:''});
+    if(!error){
+      localStorage.setItem('bk_cloud_last',id+':'+h);
+      if(localStorage.getItem('bk_cloud_prune')!==dkey(Date.now())){
+        localStorage.setItem('bk_cloud_prune',dkey(Date.now()));
+        const l=await sbClient.from('app_data').select('id').like('id','bk%');
+        const cut=dkey(Date.now()-KEEP_DAYS*864e5);
+        (l.data||[]).forEach(r=>{const m=/^bk_(\d{4}-\d{2}-\d{2})_/.exec(r.id);if(m&&m[1]<cut)sbClient.from('app_data').delete().eq('id',r.id).then(()=>{},()=>{})});
+      }
+    }
+  }catch(e){}
+}
+async function auto(){
+  if(!USER)return;
+  try{const all=await idbAll();if(!all[0]||Date.now()-all[0].ts>=GAP_MS)await snapNow('تلقائية')}catch(e){}
+}
+setTimeout(auto,20000);setInterval(auto,10*60*1000);
+
+async function restoreData(data,label){
+  if(!data||!Array.isArray(data.students)){alert('❌ النسخة غير صالحة');return}
+  if(!confirm('استرجاع النسخة ('+label+')؟\nسيتم استبدال البيانات الحالية على الجهاز وفي السحابة، وتُحفظ نسخة من الوضع الحالي أولاً.'))return;
+  await snapNow('قبل الاسترجاع',true);
+  DB=data;fixDB(DB);localStorage.setItem(KEY,JSON.stringify(DB));
+  window.__cpAllow=true;
+  if(sbClient)await cloudPush();
+  alert('✅ تم الاسترجاع ('+DB.students.length+' طالب)');location.reload();
+}
+const slotName={a:'صباحاً',b:'ظهراً',c:'مساءً'};
+async function bkDraw(){
+  const el=document.getElementById('bkLocal');if(!el)return;
+  try{
+    const all=await idbAll();
+    el.innerHTML=all.length?`<div style="max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:6px">${all.map(x=>`<div style="display:flex;align-items:center;gap:8px;background:#f8fafc;padding:8px 10px;border-radius:10px;font-size:12px;flex-wrap:wrap"><div style="flex:1;min-width:150px"><b>${fmtDT(x.ts)}</b> · ${esc(x.label)}<div style="color:#64748b">👥 ${x.students} طالب · 📋 ${x.records} سجل · ${Math.round(x.size/1024)} ك.ب</div></div><button onclick="bkRestoreLocal(${x.ts})" class="bg-p text-white font-bold px-3 py-1.5 rounded-lg">↩️ استرجاع</button><button onclick="bkDl(${x.ts})" class="bg-slate-100 font-bold px-3 py-1.5 rounded-lg">⬇️</button><button onclick="bkDel(${x.ts})" style="color:#dc2626">🗑️</button></div>`).join('')}</div>`:'<div style="font-size:12px;color:#94a3b8;padding:8px">لا توجد نسخ بعد — اضغط «أخذ نسخة الآن»</div>';
+  }catch(e){el.innerHTML='<div style="font-size:12px;color:#dc2626">النسخ المحلية غير متاحة في هذا المتصفح (الوضع الخاص؟)</div>'}
+}
+window.bkNow=async function(){const ok=await snapNow('يدوية',true);toast(ok?'✓ تم أخذ نسخة':'تعذر أخذ النسخة',ok?'ok':'err');bkDraw()};
+window.bkRestoreLocal=async function(ts){const s=await idbGet(ts);if(!s)return;let d;try{d=JSON.parse(s.json)}catch(e){alert('❌ النسخة تالفة');return}restoreData(d,fmtDT(ts))};
+window.bkDl=async function(ts){const s=await idbGet(ts);if(!s)return;const b=new Blob([JSON.stringify({school:DB.config.schoolName,date:new Date(ts).toISOString(),data:JSON.parse(s.json)})],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='AlMasaa_auto_'+dkey(ts)+'_'+new Date(ts).getHours()+'h.json';document.body.appendChild(a);a.click();document.body.removeChild(a)};
+window.bkDel=async function(ts){if(!confirm('حذف هذه النسخة؟'))return;await idbDel(ts);bkDraw()};
+window.bkCloudList=async function(){
+  const el=document.getElementById('bkCloud');if(!el)return;
+  if(!sbClient){el.innerHTML='<div style="font-size:12px;color:#dc2626">السحابة غير متاحة</div>';return}
+  el.innerHTML='<div style="font-size:12px;color:#64748b">⏳ جاري التحميل...</div>';
+  try{
+    const r=await sbClient.from('app_data').select('id,updated_at').like('id','bk%');
+    if(r.error)throw r.error;
+    const rows=(r.data||[]).filter(x=>/^bk_\d{4}-\d{2}-\d{2}_[abc]$/.test(x.id)).sort((a,b)=>a.id<b.id?1:-1);
+    el.innerHTML=rows.length?`<div style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:6px">${rows.map(x=>{const m=/^bk_(\d{4}-\d{2}-\d{2})_([abc])$/.exec(x.id);return `<div style="display:flex;align-items:center;gap:8px;background:#eff6ff;padding:8px 10px;border-radius:10px;font-size:12px"><div style="flex:1"><b>${m[1]}</b> · ${slotName[m[2]]}<div style="color:#64748b">آخر تحديث ${fmtDT(x.updated_at)}</div></div><button onclick="bkRestoreCloud('${x.id}')" class="bg-p text-white font-bold px-3 py-1.5 rounded-lg">↩️ استرجاع</button></div>`}).join('')}</div>`:'<div style="font-size:12px;color:#94a3b8">لا توجد نسخ سحابية بعد</div>';
+  }catch(e){el.innerHTML='<div style="font-size:12px;color:#dc2626">تعذر تحميل النسخ السحابية: '+esc((e&&e.message)||'')+'</div>'}
+};
+window.bkRestoreCloud=async function(id){
+  try{
+    const r=await sbClient.from('app_data').select('payload').eq('id',id).single();
+    if(r.error||!r.data)throw new Error('x');
+    restoreData(r.data.payload.data,id.replace('bk_','').replace('_',' '));
+  }catch(e){alert('❌ تعذر تحميل النسخة')}
+};
+
+const _rs8=renderSettings;
+renderSettings=function(){
+  const html=_rs8.apply(this,arguments);
+  const card=`<div class="bg-white rounded-2xl p-6 shadow-sm space-y-3"><h3 style="font-weight:900;padding-right:12px;border-right:4px solid var(--p);margin-bottom:8px">🗄️ النسخ الاحتياطية التلقائية والاسترجاع</h3><div style="background:#eff6ff;border-right:4px solid #3b82f6;padding:10px;border-radius:12px;font-size:12px;line-height:1.7">تُحفظ نسخة تلقائياً كل ساعتين ونصف تقريباً عند وجود تغييرات (حتى ${KEEP_PER_DAY} نسخ يومياً ولمدة ${KEEP_DAYS} يوماً) داخل المتصفح، ونسخة في السحابة (حتى 3 يومياً). عند الاسترجاع تُحفظ نسخة من الوضع الحالي أولاً.</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button onclick="bkNow()" class="bg-p text-white font-bold px-4 py-2 rounded-xl text-sm">📸 أخذ نسخة الآن</button><button onclick="bkCloudList()" class="bg-blue-600 text-white font-bold px-4 py-2 rounded-xl text-sm">☁️ عرض نسخ السحابة</button></div><div style="font-weight:900;font-size:13px;margin-top:6px">💾 نسخ هذا الجهاز</div><div id="bkLocal"></div><div id="bkCloud"></div></div>`;
+  setTimeout(bkDraw,60);
+  return html.replace('<button onclick="svSet()"',card+'<button onclick="svSet()"');
+};
+})();
+</script>
+
 </body>
 </html>
