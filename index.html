@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -1919,6 +1920,38 @@ renderSettings=function(){
   const html=_rs8.apply(this,arguments);
   const card=`<div class="bg-white rounded-2xl p-6 shadow-sm space-y-3"><h3 style="font-weight:900;padding-right:12px;border-right:4px solid var(--p);margin-bottom:8px">🗄️ النسخ الاحتياطية التلقائية والاسترجاع</h3><div style="background:#eff6ff;border-right:4px solid #3b82f6;padding:10px;border-radius:12px;font-size:12px;line-height:1.7">تُحفظ نسخة تلقائياً كل ساعتين ونصف تقريباً عند وجود تغييرات (حتى ${KEEP_PER_DAY} نسخ يومياً ولمدة ${KEEP_DAYS} يوماً) داخل المتصفح، ونسخة في السحابة (حتى 3 يومياً). عند الاسترجاع تُحفظ نسخة من الوضع الحالي أولاً.</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button onclick="bkNow()" class="bg-p text-white font-bold px-4 py-2 rounded-xl text-sm">📸 أخذ نسخة الآن</button><button onclick="bkCloudList()" class="bg-blue-600 text-white font-bold px-4 py-2 rounded-xl text-sm">☁️ عرض نسخ السحابة</button></div><div style="font-weight:900;font-size:13px;margin-top:6px">💾 نسخ هذا الجهاز</div><div id="bkLocal"></div><div id="bkCloud"></div></div>`;
   setTimeout(bkDraw,60);
+  return html.replace('<button onclick="svSet()"',card+'<button onclick="svSet()"');
+};
+})();
+</script>
+
+
+<!-- ============================================================
+     إضافة 9: خطاب التحويل للوحدة الصحية (العام الدراسي + اليوم والتاريخ) + اسم الوحدة الصحية من الإعدادات
+     (كتلة مضافة فقط، دون تعديل الكود الأصلي)
+     ============================================================ -->
+<script>
+(function(){
+const DEF_YEAR='العام الدراسي ٢٠٢٦ / ٢٠٢٧';
+const yr=()=>(DB.config.healthYear!==undefined?DB.config.healthYear:DEF_YEAR);
+
+const _hh=healthHTML;
+healthHTML=function(sid,reason){
+  let h=_hh.apply(this,arguments);
+  // العام الدراسي في أعلى يمين الصفحة
+  h=h.replace('<div style="border:2px solid #000;padding:12px">',m=>m+`<div style="text-align:right;font-size:12px;font-weight:900;margin-bottom:6px">${esc(yr())}</div>`);
+  // اليوم والتاريخ تحت اسم الطالب
+  const day=new Date().toLocaleDateString('ar-OM',{weekday:'long'});
+  h=h.replace(/(padding-right:20px;margin:8px 0">[\s\S]*?<\/div>)/,m=>m+`<div style="font-size:12px;padding-right:20px;margin-bottom:6px">اليوم: <b>${esc(day)}</b> &nbsp;&nbsp; التاريخ: <b>${ts()}</b></div>`);
+  return h;
+};
+
+// الإعدادات: اسم الوحدة الصحية (المخاطَب) والعام الدراسي
+const _rs9=renderSettings;
+renderSettings=function(){
+  const html=_rs9.apply(this,arguments);
+  const c=DB.config;
+  const card=`<div class="bg-white rounded-2xl p-6 shadow-sm space-y-3"><h3 style="font-weight:900;padding-right:12px;border-right:4px solid var(--p);margin-bottom:8px">🏥 خطاب التحويل للوحدة الصحية</h3><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">اسم الوحدة الصحية (سطر المخاطَب في الخطاب)</label><input value="${esc(c.healthRecipient)}" onchange="DB.config.healthRecipient=this.value;save();toast('✓ تم الحفظ')" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div><div><label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px">العام الدراسي (يظهر أعلى يمين الخطاب)</label><input value="${esc(yr())}" onchange="DB.config.healthYear=this.value;save();toast('✓ تم الحفظ')" class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"></div></div>`;
   return html.replace('<button onclick="svSet()"',card+'<button onclick="svSet()"');
 };
 })();
